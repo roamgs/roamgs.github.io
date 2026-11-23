@@ -1,7 +1,8 @@
 import {createRenderer} from './splat-renderer.js?v=sharp-orbit';
 
 const clamp = (n,min,max) => Math.max(min,Math.min(max,n));
-let closeActive, releaseCached;
+let closeActive;
+const cachedScenes=new Map();
 
 for (const figure of document.querySelectorAll('.film')) {
   const viewport=figure.querySelector('.viewport');
@@ -18,7 +19,7 @@ for (const figure of document.querySelectorAll('.film')) {
   viewport.append(mode,status);
 
   let load, canvas, renderer, frame, pointer, suppressClick, wasPlaying;
-  let ready=false, expiry, loadingHint, hoverTimer;
+  let ready=false, fullReady=false, expiry, loadingHint, pendingLayer, warmTimer;
   let yaw=.93, pitch=.64, zoom=1;
   const resize=new ResizeObserver(redraw);
   function redraw() {
@@ -35,7 +36,9 @@ for (const figure of document.querySelectorAll('.film')) {
   }
   function expireLater() {
     clearTimeout(expiry);
-    expiry=setTimeout(release,60000);
+    expiry=setTimeout(()=>{
+      if (!figure.dataset.exploring && !visibleClips.has(video)) release();
+    },60000);
   }
   function leave({resume = wasPlaying} = {}) {
     if (!figure.dataset.exploring) return;
@@ -49,20 +52,25 @@ for (const figure of document.querySelectorAll('.film')) {
     status.textContent='';
     closeActive=null;
     surface.setAttribute('aria-label',(video.paused?'Play ':'Pause ')+figure.dataset.scene+' comparison');
-    if (resume && !document.hidden && visibleClips.has(video)) video.play().catch(()=>{});
+    clips.forEach(updatePlayback);
+    if (resume && reducedMotion.matches && !document.hidden && visibleClips.has(video) && !video.hasAttribute('data-user-paused')) video.play().catch(()=>{});
     expireLater();
+  }
+  function disposeLayer(node, view) {
+    view?.dispose();
+    if (!node) return;
+    node.removeEventListener('webglcontextlost',failed);
+    node.getContext('webgl2')?.getExtension('WEBGL_lose_context')?.loseContext();
+    node.remove();
   }
   function release() {
     clearTimeout(expiry);
     load?.abort(); load=null;
-    renderer?.dispose(); renderer=null;
-    if (canvas) {
-      canvas.removeEventListener('webglcontextlost',failed);
-      canvas.getContext('webgl2')?.getExtension('WEBGL_lose_context')?.loseContext();
-      canvas.remove(); canvas=null;
-    }
-    ready=false;
-    if(releaseCached===release) releaseCached=null;
+    if (pendingLayer) disposeLayer(pendingLayer.node,pendingLayer.view);
+    pendingLayer=null;
+    disposeLayer(canvas,renderer);
+    canvas=null; renderer=null; ready=false; fullReady=false;
+    cachedScenes.delete(figure);
   }
   function failed(error) {
     error.preventDefault?.();
@@ -78,35 +86,83 @@ for (const figure of document.querySelectorAll('.film')) {
     canvas.style.visibility='visible';
     status.textContent=figure.dataset.exploring==='drag' ? 'Release drag to play' : 'Drag to orbit';
   }
-  async function prepare() {
-    if(load) return;
-    releaseCached?.();
-    releaseCached=release;
+  async function prepare(previewOnly=false) {
+    if(load || fullReady || (previewOnly && ready)) return;
+    if(previewOnly && !('DecompressionStream' in window)) return;
+    if (!cachedScenes.has(figure) && cachedScenes.size>=3) {
+      const oldest=[...cachedScenes].find(([card])=>!card.dataset.exploring && (!previewOnly || !visibleClips.has(card.querySelector('video'))));
+      if (oldest) oldest[1]();
+      else if (previewOnly) return;
+    }
+    cachedScenes.delete(figure);
+    cachedScenes.set(figure,release);
     const active=new AbortController();
     load=active;
-    if(!figure.dataset.exploring) expireLater();
-    try {
-      const buffers=await Promise.all(['activegs','roam'].map(async method=>{
-        const url='models/'+figure.dataset.scene+'-'+method+'.splat';
-        const res=await fetch(url,{signal:active.signal});
-        if (!res.ok) throw Error('Model unavailable');
-        return res.arrayBuffer();
+    async function loadPair(folder) {
+      return Promise.all(['activegs','roam'].map(async method=>{
+        const name=figure.dataset.scene+'-'+method+'.splat';
+        const url=folder ? 'models/'+folder+'/'+name+'.gz' : 'models/'+name;
+        const response=await fetch(url,{signal:active.signal});
+        if (!response.ok) throw Error('Model unavailable');
+        if (!folder) return response.arrayBuffer();
+        const blob=await response.blob();
+        const magic=new Uint8Array(await blob.slice(0,2).arrayBuffer());
+        // Some static hosts transparently decompress .gz assets.
+        if (magic[0]!==31 || magic[1]!==139) return blob.arrayBuffer();
+        return new Response(blob.stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
       }));
+    }
+    async function present(buffers) {
       if(active.signal.aborted) return;
-      canvas=document.createElement('canvas');
-      canvas.className='orbit-view';
-      canvas.style.visibility='hidden';
-      canvas.setAttribute('aria-hidden','true');
-      viewport.insertBefore(canvas,surface);
-      canvas.addEventListener('webglcontextlost',failed);
-      renderer=createRenderer(canvas,buffers,figure.hasAttribute('data-center-each'),()=>{
-        ready=true;
-        showScene();
-      },failed);
-      renderer.draw(yaw,pitch,zoom);
+      const node=document.createElement('canvas');
+      node.className='orbit-view';
+      node.style.visibility='hidden';
+      node.setAttribute('aria-hidden','true');
+      viewport.insertBefore(node,surface);
+      const layer={node};
+      pendingLayer=layer;
+      await new Promise((resolve,reject)=>{
+        const abort=()=>reject(new DOMException('Aborted','AbortError'));
+        active.signal.addEventListener('abort',abort,{once:true});
+        layer.view=createRenderer(node,buffers,figure.hasAttribute('data-center-each'),()=>{
+          active.signal.removeEventListener('abort',abort);
+          if(active.signal.aborted) return;
+          disposeLayer(canvas,renderer);
+          canvas=node; renderer=layer.view; pendingLayer=null; ready=true;
+          canvas.addEventListener('webglcontextlost',failed);
+          renderer.draw(yaw,pitch,zoom);
+          clearTimeout(loadingHint);
+          showScene();
+          resolve();
+        },event=>{
+          if (pendingLayer===layer) reject(new Error('Scene initialization failed'));
+          else if (canvas===node) failed(event);
+        });
+        layer.view.draw(yaw,pitch,zoom);
+      });
+    }
+    try {
+      if ('DecompressionStream' in window) {
+        // Keep the preview draggable until the full pair has a sorted frame.
+        try { if (!ready) await present(await loadPair('previews')); }
+        catch(error) { if(active.signal.aborted || pendingLayer) throw error; }
+        if(active.signal.aborted) return;
+        if(!figure.dataset.exploring) { load=null; expireLater(); return; }
+        let full;
+        try { full=await loadPair('compressed'); }
+        catch(error) { if(active.signal.aborted) throw error; full=await loadPair(''); }
+        await present(full);
+      } else {
+        await present(await loadPair(''));
+      }
+      if(!active.signal.aborted) fullReady=true;
     } catch(error) {
       if(active.signal.aborted) return;
-      console.warn('Scene explorer:',error);
+      if(ready && canvas) {
+        if (pendingLayer) disposeLayer(pendingLayer.node,pendingLayer.view);
+        pendingLayer=null; load=null;
+        return;
+      }
       failed(error);
     }
   }
@@ -117,7 +173,7 @@ for (const figure of document.querySelectorAll('.film')) {
     yaw=.93; pitch=.64; zoom=1;
     wasPlaying=!video.paused;
     figure.dataset.exploring=entry;
-    video.pause();
+    clips.forEach(updatePlayback);
     mode.textContent='Back to video';
     mode.setAttribute('aria-pressed','true');
     surface.setAttribute('aria-label',entry==='drag'
@@ -127,6 +183,7 @@ for (const figure of document.querySelectorAll('.film')) {
     if(ready) {
       renderer.draw(yaw,pitch,zoom);
       showScene();
+      prepare();
     } else {
       status.textContent='';
       loadingHint=setTimeout(()=>{status.textContent='Loading 3D…';},180);
@@ -134,21 +191,30 @@ for (const figure of document.querySelectorAll('.film')) {
     }
   }
 
-  // Warm the viewer on deliberate interest, without downloading every gallery model.
-  function warm() {
-    if(!closeActive && !navigator.connection?.saveData) prepare();
+  function warmPreview() {
+    if(document.hidden || closeActive || navigator.connection?.saveData) return;
+    clearTimeout(warmTimer);
+    prepare(true);
   }
-  viewport.addEventListener('pointerenter',e=>{
-    if(e.pointerType==='mouse') hoverTimer=setTimeout(warm,220);
+  // Give the visible replay its first frame before preparing a drag.
+  video.addEventListener('playing',()=>{
+    clearTimeout(warmTimer);
+    warmTimer=setTimeout(()=>{ if(visibleClips.has(video) && !video.paused) warmPreview(); },450);
   });
-  viewport.addEventListener('pointerleave',()=>clearTimeout(hoverTimer));
-  mode.addEventListener('focus',warm);
+  viewport.addEventListener('pointerenter',e=>{
+    if(e.pointerType==='mouse') {
+      clearTimeout(warmTimer);
+      warmTimer=setTimeout(warmPreview,180);
+    }
+  });
+  mode.addEventListener('focus',warmPreview);
   mode.addEventListener('click',()=>{
     if (figure.dataset.exploring) leave();
     else { explore('button'); surface.focus({preventScroll:true}); }
   });
   surface.addEventListener('pointerdown',e=>{
     if (!e.isPrimary || e.button!==0) return;
+    warmPreview();
     suppressClick=false;
     pointer={id:e.pointerId,x:e.clientX,y:e.clientY,drag:false};
     surface.setPointerCapture(e.pointerId);

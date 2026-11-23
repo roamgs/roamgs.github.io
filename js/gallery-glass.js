@@ -16,8 +16,13 @@ function addReplayControl(figure) {
     toggle.setAttribute('aria-label', (video.paused ? 'Play ' : 'Pause ') + figure.dataset.scene + ' comparison');
   }
   toggle.addEventListener('click', () => {
-    if (video.paused) video.play().catch(playbackState);
-    else video.pause();
+    if (video.paused) {
+      delete video.dataset.userPaused;
+      video.play().catch(playbackState);
+    } else {
+      video.dataset.userPaused = '';
+      video.pause();
+    }
   });
   video.addEventListener('play', playbackState);
   video.addEventListener('pause', playbackState);

@@ -102,3 +102,10 @@ body {
 @media (max-width:600px) {
   [data-theme="dark"] .hero-scene {margin-block-start:-1.2rem}
 }
+
+@supports (font: -apple-system-body) {
+  .scroll-glass, .cinema .actions a {
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
+  }
+}

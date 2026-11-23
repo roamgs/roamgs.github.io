@@ -204,7 +204,7 @@ summary:hover {color: var(--ink)}
 </style>
 <link rel="stylesheet" href="css/gallery-glass.css?v=scene-assets">
 <link rel="stylesheet" href="css/results.css?v=replica">
-<link rel="stylesheet" href="css/theme.css?v=room-cutout">
+<link rel="stylesheet" href="css/theme.css?v=fast-room">
 </head>
 <body>
 
@@ -263,7 +263,7 @@ summary:hover {color: var(--ink)}
     <div class="actions"><a class="paper-link" href="#comparison"><svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="19" height="15" rx="3"/><path d="m10 9 5 3-5 3z"/></svg> Watch comparisons</a></div>
   </div>
   <figure class="hero-scene">
-    <video id="cinema-film" class="room" poster="media/hero-cutout.webp" muted loop playsinline preload="metadata" aria-label="ROAM-GS incremental Gaussian reconstruction of HM3D 00848"></video>
+    <video id="cinema-film" class="room" poster="media/hero-cutout.webp?v=fast" muted loop playsinline preload="metadata" aria-label="ROAM-GS incremental Gaussian reconstruction of HM3D 00848"></video>
     <script>
       (() => {
         const film = document.getElementById('cinema-film');
@@ -271,11 +271,11 @@ summary:hover {color: var(--ink)}
           film.dataset.alpha = '';
           film.addEventListener('error', () => {
             delete film.dataset.alpha;
-            film.src = 'media/hero.mp4';
+            film.src = 'media/hero.mp4?v=fast';
           }, {once:true});
-          film.src = 'media/hero-alpha.mov';
+          film.src = 'media/hero-alpha.mov?v=fast';
         } else {
-          film.src = 'media/hero.mp4';
+          film.src = 'media/hero.mp4?v=fast';
         }
       })();
     </script>
@@ -304,13 +304,13 @@ summary:hover {color: var(--ink)}
   <div class="films">
    <div class="film-slot">
     <figure data-scene="102344250" class="film" id="scene-102344250">
-     <video controls muted loop playsinline preload="none" poster="media/102344250-replay.jpg" src="media/102344250-replay.mp4" aria-label="102344250 reconstruction comparison"></video>
+     <video controls muted loop playsinline preload="none" data-poster="media/102344250-replay.jpg?v=fast" src="media/102344250-replay.mp4?v=fast" aria-label="102344250 reconstruction comparison"></video>
      <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
     </figure>
    </div>
    <div class="film-slot">
     <figure data-scene="106365897_174225972" class="film" id="scene-106365897_174225972">
-     <video controls muted loop playsinline preload="none" poster="media/106365897_174225972-replay.jpg" src="media/106365897_174225972-replay.mp4" aria-label="106365897_174225972 reconstruction comparison"></video>
+     <video controls muted loop playsinline preload="none" data-poster="media/106365897_174225972-replay.jpg?v=fast" src="media/106365897_174225972-replay.mp4?v=fast" aria-label="106365897_174225972 reconstruction comparison"></video>
      <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
     </figure>
    </div>
@@ -319,25 +319,25 @@ summary:hover {color: var(--ink)}
   <div class="films">
    <div class="film-slot">
     <figure data-scene="00848-ziup5kvtCCR" class="film" id="scene-00848-ziup5kvtCCR">
-     <video controls muted loop playsinline preload="none" poster="media/00848-ziup5kvtCCR-replay.jpg" src="media/00848-ziup5kvtCCR-replay.mp4" aria-label="00848-ziup5kvtCCR reconstruction comparison"></video>
+     <video controls muted loop playsinline preload="none" data-poster="media/00848-ziup5kvtCCR-replay.jpg?v=fast" src="media/00848-ziup5kvtCCR-replay.mp4?v=fast" aria-label="00848-ziup5kvtCCR reconstruction comparison"></video>
      <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
     </figure>
    </div>
    <div class="film-slot">
     <figure data-center-each data-scene="00813-svBbv1Pavdk" class="film" id="scene-00813-svBbv1Pavdk">
-     <video controls muted loop playsinline preload="none" poster="media/00813-svBbv1Pavdk-replay.jpg" src="media/00813-svBbv1Pavdk-replay.mp4" aria-label="00813-svBbv1Pavdk reconstruction comparison"></video>
+     <video controls muted loop playsinline preload="none" data-poster="media/00813-svBbv1Pavdk-replay.jpg?v=fast" src="media/00813-svBbv1Pavdk-replay.mp4?v=fast" aria-label="00813-svBbv1Pavdk reconstruction comparison"></video>
      <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
     </figure>
    </div>
    <div class="film-slot">
     <figure data-scene="00860-RJaJt8UjXav" class="film" id="scene-00860-RJaJt8UjXav">
-     <video controls muted loop playsinline preload="none" poster="media/00860-RJaJt8UjXav-replay.jpg" src="media/00860-RJaJt8UjXav-replay.mp4" aria-label="00860-RJaJt8UjXav reconstruction comparison"></video>
+     <video controls muted loop playsinline preload="none" data-poster="media/00860-RJaJt8UjXav-replay.jpg?v=fast" src="media/00860-RJaJt8UjXav-replay.mp4?v=fast" aria-label="00860-RJaJt8UjXav reconstruction comparison"></video>
      <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
     </figure>
    </div>
    <div class="film-slot">
     <figure data-center-each data-scene="00879-7Ukhou1GxYi" class="film" id="scene-00879-7Ukhou1GxYi">
-     <video controls muted loop playsinline preload="none" poster="media/00879-7Ukhou1GxYi-replay.jpg" src="media/00879-7Ukhou1GxYi-replay.mp4" aria-label="00879-7Ukhou1GxYi reconstruction comparison"></video>
+     <video controls muted loop playsinline preload="none" data-poster="media/00879-7Ukhou1GxYi-replay.jpg?v=fast" src="media/00879-7Ukhou1GxYi-replay.mp4?v=fast" aria-label="00879-7Ukhou1GxYi reconstruction comparison"></video>
      <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
     </figure>
    </div>
@@ -464,7 +464,7 @@ summary:hover {color: var(--ink)}
 
 </main>
 <footer class="dataset-credits">Scene visualizations are derived from the <a href="https://huggingface.co/datasets/hssd/hssd-hab">Habitat Synthetic Scenes Dataset</a> (<a href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a>) and the <a href="https://github.com/matterport/habitat-matterport-3dresearch">Habitat-Matterport 3D Research Dataset</a> (<a href="https://matterport.com/legal/matterport-end-user-license-agreement-academic-use-model-data">Matterport academic use terms</a>).</footer>
-<script src="js/gallery-glass.js?v=overview"></script>
+<script src="js/gallery-glass.js?v=playback"></script>
 <script src="js/results.js?v=appendix-normals"></script>
 <script type="module" src="js/paper-checkpoints.js"></script>
 <script type="module" src="js/figure-detail.js"></script>
@@ -473,14 +473,47 @@ summary:hover {color: var(--ink)}
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
 const clips=[...document.querySelectorAll('video')];
 const visibleClips=new Set();
-const userPaused=new WeakSet();
-function updatePlayback(clip){
-  if(document.hidden || !visibleClips.has(clip) || clip.closest("[data-exploring]")){
-    clip.pause();
-  }else if(!reducedMotion.matches && !userPaused.has(clip)){
-    clip.play().catch(()=>{});
+
+const queuedClips=new Set();
+let startingClip, startTimeout;
+function shouldPlay(clip) {
+  return !document.hidden && visibleClips.has(clip) && !reducedMotion.matches
+    && !clip.hasAttribute('data-user-paused') && !document.querySelector('.film[data-exploring]');
+}
+function startNextClip() {
+  if(startingClip) return;
+  for(const clip of queuedClips) {
+    queuedClips.delete(clip);
+    if(!shouldPlay(clip) || !clip.paused) continue;
+    startingClip=clip;
+    const next=()=>{
+      if(startingClip!==clip) return;
+      clearTimeout(startTimeout);
+      startingClip=null;
+      startNextClip();
+    };
+    startTimeout=setTimeout(next,900);
+    clip.play().then(next,next);
+    return;
   }
 }
+function updatePlayback(clip) {
+  if(!shouldPlay(clip)) {
+    queuedClips.delete(clip);
+    if (!visibleClips.has(clip) || document.hidden || document.querySelector('.film[data-exploring]')) clip.pause();
+  } else if(clip.paused) {
+    queuedClips.add(clip);
+    startNextClip();
+  }
+}
+const posterObserver=new IntersectionObserver(entries=>{
+  for(const {target,isIntersecting} of entries) {
+    if(!isIntersecting) continue;
+    target.poster=target.dataset.poster;
+    posterObserver.unobserve(target);
+  }
+},{rootMargin:'160px'});
+for(const clip of clips) if(clip.dataset.poster) posterObserver.observe(clip);
 const observer=new IntersectionObserver(entries=>{
   for(const entry of entries){
     const clip=entry.target;
@@ -490,10 +523,7 @@ const observer=new IntersectionObserver(entries=>{
   }
 },{threshold:[0,.20]});
 for(const clip of clips){
-  clip.addEventListener('pause',()=>{
-    if(clip.paused && !clip.closest("[data-exploring]") && visibleClips.has(clip) && !document.hidden)userPaused.add(clip);
-  });
-  clip.addEventListener('play',()=>userPaused.delete(clip));
+  clip.muted = true;
   observer.observe(clip);
 }
 document.addEventListener('visibilitychange',()=>clips.forEach(updatePlayback));
@@ -533,6 +563,6 @@ for (const replay of [room, matchingReplay]) {
   replay.addEventListener('playing', alignReplay);
 }
 </script>
-<script type="module" src="js/scene-explorer.js?v=scene-assets"></script>
+<script type="module" src="js/scene-explorer.js?v=progressive"></script>
 </body>
 </html>
