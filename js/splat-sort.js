@@ -13,8 +13,9 @@ function decode(buffer,motionBudget) {
   const header=prefix.slice(0,end), start=end+11;
   const count=Number(header.match(/^element vertex (\d+)$/m)?.[1]);
   const chunks=Number(header.match(/^element chunk (\d+)$/m)?.[1]);
+  const framing=Number(header.match(/^element framing (\d+)$/m)?.[1] || 0);
   const offset=start+chunks*72;
-  if(!count || chunks!==Math.ceil(count/256) || start%4 || buffer.byteLength!==offset+count*16)
+  if(!count || chunks!==Math.ceil(count/256) || start%4 || buffer.byteLength!==offset+count*16+framing*12)
     throw Error('Invalid compressed PLY');
   const bounds=new Float32Array(buffer,start,chunks*18);
   const packed=new Uint32Array(buffer,offset,count*4);
@@ -30,7 +31,9 @@ function decode(buffer,motionBudget) {
   const vertexWords=new Uint32Array(vertices.buffer);
   let bestScore=-1, groupScore=0, representative=0;
   const stride=Math.max(1,Math.ceil(count/4096));
-  const sample=new Float32Array(Math.ceil(count/stride)*3);
+  // Compact PLYs retain the original framing points for identical orbit bounds.
+  const sample=framing ? new Float32Array(buffer,offset+count*16,framing*3).slice()
+                       : new Float32Array(Math.ceil(count/stride)*3);
   const q=new Float64Array(4);
   for(let i=0;i<count;i++) {
     const b=(i>>>8)*18, j=i*4, k=i*10;
@@ -38,7 +41,7 @@ function decode(buffer,motionBudget) {
     vertices[k]=positions[i*3]=mix(bounds[b],bounds[b+3],(pos>>>21)/2047);
     vertices[k+1]=positions[i*3+1]=mix(bounds[b+1],bounds[b+4],((pos>>>11)&1023)/1023);
     vertices[k+2]=positions[i*3+2]=mix(bounds[b+2],bounds[b+5],(pos&2047)/2047);
-    if(i%stride===0) {
+    if(!framing && i%stride===0) {
       const p=i/stride*3;
       sample[p]=vertices[k]; sample[p+1]=vertices[k+1]; sample[p+2]=vertices[k+2];
     }

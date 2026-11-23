@@ -84,7 +84,7 @@ function projectedBounds(sample,right,up) {
 }
 
 export function createRenderer(canvas,blobs,centerEach,onReady,onError) {
-  const worker=new Worker(new URL('./splat-sort.js?v=motion-lod-1',import.meta.url),{type:'module'});
+  const worker=new Worker(new URL('./splat-sort.js?v=compact-orbit-1',import.meta.url),{type:'module'});
   const levels={};
   let gl, loc, samples, frame=0;
   const initialYaw=.93, initialPitch=.64;

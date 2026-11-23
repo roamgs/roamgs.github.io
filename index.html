@@ -200,7 +200,7 @@ summary:hover {color: var(--ink)}
 }
 
 </style>
-<link rel="stylesheet" href="css/gallery-glass.css?v=scroll-play">
+<link rel="stylesheet" href="css/gallery-glass.css?v=gallery-white">
 <link rel="stylesheet" href="css/results.css?v=replica">
 <link rel="stylesheet" href="css/theme.css?v=frame-cutout">
 </head>
@@ -279,7 +279,6 @@ summary:hover {color: var(--ink)}
 <section id="comparison" class="demos" aria-labelledby="compare-title">
  <div class="gallery-inner">
   <header class="section-head"><h2 id="compare-title">Video Comparisons</h2></header>
-  <p class="replay-note">Cutaway replays use smoothed camera paths to show how each reconstruction develops.</p>
   <h3 class="dataset">HSSD</h3>
   <div class="films">
    <div class="film-slot">
@@ -299,13 +298,13 @@ summary:hover {color: var(--ink)}
   <div class="films">
    <div class="film-slot">
     <figure data-scene="00848-ziup5kvtCCR" class="film" id="scene-00848-ziup5kvtCCR">
-     <video controls muted loop playsinline preload="none" poster="media/00848-ziup5kvtCCR-replay.jpg?v=fast" src="media/00848-ziup5kvtCCR-replay.mp4?v=scroll30" aria-label="00848-ziup5kvtCCR reconstruction comparison"></video>
+     <video controls muted loop playsinline preload="none" poster="media/00848-ziup5kvtCCR-replay.jpg?v=white30" src="media/00848-ziup5kvtCCR-replay.mp4?v=white30" aria-label="00848-ziup5kvtCCR reconstruction comparison"></video>
      <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
     </figure>
    </div>
    <div class="film-slot">
     <figure data-center-each data-scene="00813-svBbv1Pavdk" class="film" id="scene-00813-svBbv1Pavdk">
-     <video controls muted loop playsinline preload="none" poster="media/00813-svBbv1Pavdk-replay.jpg?v=fast" src="media/00813-svBbv1Pavdk-replay.mp4?v=scroll30" aria-label="00813-svBbv1Pavdk reconstruction comparison"></video>
+     <video controls muted loop playsinline preload="none" poster="media/00813-svBbv1Pavdk-replay.jpg?v=fast" src="media/00813-svBbv1Pavdk-replay.mp4?v=white30" aria-label="00813-svBbv1Pavdk reconstruction comparison"></video>
      <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
     </figure>
    </div>
@@ -317,7 +316,7 @@ summary:hover {color: var(--ink)}
    </div>
    <div class="film-slot">
     <figure data-center-each data-scene="00879-7Ukhou1GxYi" class="film" id="scene-00879-7Ukhou1GxYi">
-     <video controls muted loop playsinline preload="none" poster="media/00879-7Ukhou1GxYi-replay.jpg?v=fast" src="media/00879-7Ukhou1GxYi-replay.mp4?v=scroll30" aria-label="00879-7Ukhou1GxYi reconstruction comparison"></video>
+     <video controls muted loop playsinline preload="none" poster="media/00879-7Ukhou1GxYi-replay.jpg?v=fast" src="media/00879-7Ukhou1GxYi-replay.mp4?v=white30" aria-label="00879-7Ukhou1GxYi reconstruction comparison"></video>
      <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
     </figure>
    </div>
@@ -587,6 +586,6 @@ if (sceneAnchor && document.getElementById(sceneAnchor[1])) {
   document.getElementById(sceneAnchor[1]).scrollIntoView();
 }
 </script>
-<script type="module" src="js/scene-explorer.js?v=motion-lod-1"></script>
+<script type="module" src="js/scene-explorer.js?v=compact-orbit-1"></script>
 </body>
 </html>

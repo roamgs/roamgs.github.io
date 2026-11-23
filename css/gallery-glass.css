@@ -332,7 +332,6 @@
 .concept.memory {--concept-ink:#24549a;--concept-tint:#dfebfa}
 .concept.goal {--concept-ink:#27684c;--concept-tint:#dcefe3}
 .concept.views {--concept-ink:#903958;--concept-tint:#f5dfe9}
-.replay-note {margin:.6rem auto 1.2rem;text-align:center;max-width:60ch;color:#635b68;font-size:.88rem}
 
 
 .dataset-credits {margin:0 auto;padding:1rem max(var(--gutter),2.7rem) 2rem max(var(--gutter),var(--contents-rail,0rem));max-width:70rem;text-align:center;color:#645b69;font-size:.78rem;line-height:1.55}

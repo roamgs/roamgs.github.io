@@ -1,8 +1,13 @@
-import {createRenderer} from './splat-renderer.js?v=motion-lod-1';
+import {createRenderer} from './splat-renderer.js?v=compact-orbit-1';
 
 const clamp = (n,min,max) => Math.max(min,Math.min(max,n));
 let closeActive;
 const cachedScenes=new Map();
+const compactModels=new Set([
+  '102344250-roam','106365897_174225972-roam',
+  '00848-ziup5kvtCCR-activegs','00813-svBbv1Pavdk-roam',
+  '00860-RJaJt8UjXav-roam','00879-7Ukhou1GxYi-roam'
+]);
 const nearScene=new IntersectionObserver(entries=>{
   for(const {target,isIntersecting} of entries) {
     if(!isIntersecting && target.dataset.exploring) closeActive?.();
@@ -79,8 +84,11 @@ for (const figure of document.querySelectorAll('.film')) {
     canvas.style.visibility='visible';
     status.textContent=figure.dataset.exploring==='drag' ? 'Release drag to play' : 'Drag to orbit';
   }
-  const urls=['activegs','roam'].map(method=>
-    new URL('models/dense/'+figure.dataset.scene+'-'+method+'.ply',document.baseURI).href);
+  const urls=['activegs','roam'].map(method=>{
+    const model=figure.dataset.scene+'-'+method;
+    const directory=compactModels.has(model) ? 'compact' : 'dense';
+    return new URL('models/'+directory+'/'+model+'.ply',document.baseURI).href;
+  });
   async function prepare() {
     if(canvas) return;
     // Reserve GPU memory for the active comparison. Reuse a second completed pair on desktop.
@@ -129,7 +137,7 @@ for (const figure of document.querySelectorAll('.film')) {
     resize.observe(viewport);
     if(ready) showScene();
     else {
-      status.textContent='Loading dense 3D…';
+      status.textContent='Loading 3D…';
       prepare();
     }
   }
