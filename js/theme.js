@@ -4,7 +4,7 @@
   let saved;
   try { saved = localStorage.getItem('roam-appearance'); } catch {}
   root.dataset.theme = requested === 'light' || requested === 'dark'
-    ? requested : saved === 'dark' ? 'dark' : 'light';
+    ? requested : saved === 'light' ? 'light' : 'dark';
 
   document.addEventListener('DOMContentLoaded', () => {
     const button = document.querySelector('.theme-switch');
