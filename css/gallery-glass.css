@@ -335,7 +335,5 @@
 .concept.views {--concept-ink:#903958;--concept-tint:#f5dfe9}
 .replay-note {margin:.6rem auto 1.2rem;text-align:center;max-width:60ch;color:#635b68;font-size:.88rem}
 
-.snapshot-budget {display:none}
-.film[data-exploring] .snapshot-budget {display:block;color:#5c5461;font:500 .74rem/1.2 system-ui,sans-serif}
 
 .dataset-credits {margin:0 auto;padding:1rem max(var(--gutter),2.7rem) 2rem max(var(--gutter),var(--contents-rail,0rem));max-width:70rem;text-align:center;color:#645b69;font-size:.78rem;line-height:1.55}

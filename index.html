@@ -490,7 +490,26 @@ room.defaultPlaybackRate = 1.25;
 room.playbackRate = room.defaultPlaybackRate;
 const matchingReplay = document.querySelector('#scene-00848-ziup5kvtCCR video');
 matchingReplay.defaultPlaybackRate = matchingReplay.playbackRate = room.defaultPlaybackRate;
+let lastReplay;
+for (const replay of [room, matchingReplay]) {
+  let handoffFrom;
+  function alignReplay() {
+    if (!handoffFrom || !Number.isFinite(replay.duration)) return;
+    const phase = handoffFrom.currentTime % replay.duration;
+    if (!replay.seekable.length || replay.seekable.end(replay.seekable.length - 1) < phase) return;
+    handoffFrom = null;
+    if (Math.abs(replay.currentTime - phase) > 1 / 30) replay.currentTime = phase;
+  }
+  replay.addEventListener('play', () => {
+    if (lastReplay === replay) return;
+    handoffFrom = lastReplay;
+    lastReplay = replay;
+    alignReplay();
+  });
+  replay.addEventListener('loadedmetadata', alignReplay);
+  replay.addEventListener('playing', alignReplay);
+}
 </script>
-<script type="module" src="js/scene-explorer.js?v=sharp-orbit"></script>
+<script type="module" src="js/scene-explorer.js?v=aligned-orbit"></script>
 </body>
 </html>
