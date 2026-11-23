@@ -1,22 +1,8 @@
-import {createRenderer} from './splat-renderer.js?v=retina-warm';
+import {createRenderer} from './splat-renderer.js?v=motion-lod-1';
 
 const clamp = (n,min,max) => Math.max(min,Math.min(max,n));
 let closeActive;
 const cachedScenes=new Map();
-// Keep compact PLY blobs for this page. Decode and allocate GPU buffers for at most
-// the first warm scene and the scenes the visitor actually selects.
-const modelFiles=new Map();
-const downloads=[];
-function modelFile(url,priority) {
-  if(!modelFiles.has(url)) {
-    const request=fetch(url,{priority}).then(response=>{
-      if(!response.ok) throw Error('Model unavailable');
-      return response.blob();
-    }).catch(error=>{modelFiles.delete(url); throw error;});
-    modelFiles.set(url,request);
-  }
-  return modelFiles.get(url);
-}
 const nearScene=new IntersectionObserver(entries=>{
   for(const {target,isIntersecting} of entries) {
     if(!isIntersecting && target.dataset.exploring) closeActive?.();
@@ -37,10 +23,10 @@ for (const figure of document.querySelectorAll('.film')) {
   status.setAttribute('role','status');
   viewport.append(mode,status);
 
-  let canvas,renderer,pointer,suppressClick,expiry;
+  let canvas,renderer,pointer,suppressClick,expiry,download,warmTimer;
   let ready=false, yaw=.93, pitch=.64, zoom=1;
   const resize=new ResizeObserver(()=>redraw());
-  function redraw(moving=false) {
+  function redraw(moving=!!pointer?.drag) {
     if(ready && figure.dataset.exploring) renderer.draw(yaw,pitch,zoom,moving);
   }
   function turn(dx,dy) {
@@ -52,7 +38,7 @@ for (const figure of document.querySelectorAll('.film')) {
     clearTimeout(expiry);
     expiry=setTimeout(()=>{if(!figure.dataset.exploring) release();},60000);
   }
-  function leave() {
+  function leave(keepPreparing=false) {
     if(!figure.dataset.exploring) return;
     resize.disconnect();
     renderer?.hide();
@@ -65,10 +51,13 @@ for (const figure of document.querySelectorAll('.film')) {
     closeActive=null;
     surface.setAttribute('aria-label',(video.paused?'Play ':'Pause ')+figure.dataset.scene+' comparison');
     syncPlayback();
-    expireLater();
+    if(!ready && !keepPreparing) release();
+    else expireLater();
   }
   function release() {
-    clearTimeout(expiry);
+    clearTimeout(expiry); clearTimeout(warmTimer);
+    download?.abort();
+    download=null;
     canvas?.removeEventListener('webglcontextlost',failed);
     renderer?.dispose(); canvas?.remove();
     canvas=null; renderer=null; ready=false;
@@ -107,14 +96,22 @@ for (const figure of document.querySelectorAll('.film')) {
     viewport.insertBefore(canvas,surface);
     canvas.addEventListener('webglcontextlost',failed);
     const node=canvas;
+    download=new AbortController();
+    const {signal}=download;
     try {
-      const blobs=await Promise.all(urls.map(url=>modelFile(url,'high')));
+      const blobs=await Promise.all(urls.map(async url=>{
+        const response=await fetch(url,{signal});
+        if(!response.ok) throw Error('Model unavailable');
+        return response.blob();
+      }));
       if(canvas!==node) return;
+      download=null;
       renderer=createRenderer(canvas,blobs,figure.hasAttribute('data-center-each'),()=>{
+        if(canvas!==node) return;
         ready=true;
         if(figure.dataset.exploring) showScene();
         else expireLater();
-      },failed);
+      },error=>{if(canvas===node) failed(error);});
     } catch(error) {if(canvas===node) failed(error);}
   }
   function explore(entry) {
@@ -123,6 +120,7 @@ for (const figure of document.querySelectorAll('.film')) {
     clearTimeout(expiry);
     yaw=.93; pitch=.64; zoom=1;
     figure.dataset.exploring=entry;
+    syncPlayback();
     mode.textContent='Back to video';
     mode.setAttribute('aria-pressed','true');
     surface.setAttribute('aria-label',entry==='drag'
@@ -135,12 +133,13 @@ for (const figure of document.querySelectorAll('.film')) {
       prepare();
     }
   }
-  downloads.push({urls,prepare});
   nearScene.observe(figure);
   mode.addEventListener('pointerenter',event=>{
-    if(event.pointerType==='mouse' && !closeActive && !navigator.connection?.saveData) prepare();
+    if(event.pointerType==='mouse' && !navigator.connection?.saveData) {
+      warmTimer=setTimeout(()=>{if(!closeActive && !document.hidden) prepare();},180);
+    }
   });
-  mode.addEventListener('focus',()=>{if(!closeActive && !navigator.connection?.saveData) prepare();});
+  mode.addEventListener('pointerleave',()=>clearTimeout(warmTimer));
   mode.addEventListener('click',()=>{
     if (figure.dataset.exploring) leave();
     else { explore('button'); surface.focus({preventScroll:true}); }
@@ -172,10 +171,10 @@ for (const figure of document.querySelectorAll('.film')) {
     if (event.pointerId !== pointer?.id) return;
     const dragged = pointer.drag;
     pointer = null;
-    if (dragged) redraw();
     if (dragged && figure.dataset.exploring === 'drag') {
-      leave();
-    }
+      // A quick first drag may end before the pair arrives. Keep it for a repeat.
+      leave(true);
+    } else if(dragged) redraw();
   }
   surface.addEventListener('pointerup', finishDrag);
   surface.addEventListener('pointercancel', finishDrag);
@@ -196,31 +195,8 @@ for (const figure of document.querySelectorAll('.film')) {
     if (e.target!==surface) return;
     const delta={ArrowLeft:[-7,0],ArrowRight:[7,0],ArrowUp:[0,6],ArrowDown:[0,-6]}[e.key];
     if (delta) turn(...delta);
-    else if (['+','=','-'].includes(e.key)) { zoom=clamp(zoom*(e.key==='-'?.9:1.1),.65,2.8); redraw(); }
+    else if (['+','=','-'].includes(e.key)) { zoom=clamp(zoom*(e.key==='-'?.9:1.1),.65,2.8); redraw(true); }
     else return;
     e.preventDefault();
   });
 }
-
-async function preloadScenes() {
-  if(navigator.connection?.saveData) return;
-  for(const [index,scene] of downloads.entries()) {
-    for(const url of scene.urls) {
-      while(document.hidden || closeActive || clips.some(clip=>!clip.paused &&
-        clip.readyState<3 && !clip.error && clip.getBoundingClientRect().bottom>0 &&
-        clip.getBoundingClientRect().top<innerHeight)) {
-        // A requested scene can always bypass this background queue.
-        await new Promise(resolve=>setTimeout(resolve,600));
-      }
-      try { await modelFile(url,'low'); }
-      catch { /* An explicit visit retries any failed background transfer. */ }
-    }
-    if(index===0 && !document.hidden && !cachedScenes.size && scene.urls.every(url=>modelFiles.has(url))) {
-      const warm=()=>{if(!cachedScenes.size && !document.hidden) scene.prepare();};
-      if(window.requestIdleCallback) requestIdleCallback(warm,{timeout:1200});
-      else setTimeout(warm,120);
-    }
-  }
-}
-// The media elements request playback first. Model downloads run one file at a time.
-setTimeout(preloadScenes,300);

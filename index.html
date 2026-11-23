@@ -284,13 +284,13 @@ summary:hover {color: var(--ink)}
   <div class="films">
    <div class="film-slot">
     <figure data-scene="102344250" class="film" id="scene-102344250">
-     <video controls muted loop playsinline preload="auto" poster="media/102344250-replay.jpg?v=fast" src="media/102344250-replay.mp4?v=scroll30" aria-label="102344250 reconstruction comparison"></video>
+     <video controls muted loop playsinline preload="none" poster="media/102344250-replay.jpg?v=fast" src="media/102344250-replay.mp4?v=scroll30" aria-label="102344250 reconstruction comparison"></video>
      <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
     </figure>
    </div>
    <div class="film-slot">
     <figure data-scene="106365897_174225972" class="film" id="scene-106365897_174225972">
-     <video controls muted loop playsinline preload="auto" poster="media/106365897_174225972-replay.jpg?v=fast" src="media/106365897_174225972-replay.mp4?v=scroll30" aria-label="106365897_174225972 reconstruction comparison"></video>
+     <video controls muted loop playsinline preload="none" poster="media/106365897_174225972-replay.jpg?v=fast" src="media/106365897_174225972-replay.mp4?v=scroll30" aria-label="106365897_174225972 reconstruction comparison"></video>
      <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
     </figure>
    </div>
@@ -299,25 +299,25 @@ summary:hover {color: var(--ink)}
   <div class="films">
    <div class="film-slot">
     <figure data-scene="00848-ziup5kvtCCR" class="film" id="scene-00848-ziup5kvtCCR">
-     <video controls muted loop playsinline preload="auto" poster="media/00848-ziup5kvtCCR-replay.jpg?v=fast" src="media/00848-ziup5kvtCCR-replay.mp4?v=scroll30" aria-label="00848-ziup5kvtCCR reconstruction comparison"></video>
+     <video controls muted loop playsinline preload="none" poster="media/00848-ziup5kvtCCR-replay.jpg?v=fast" src="media/00848-ziup5kvtCCR-replay.mp4?v=scroll30" aria-label="00848-ziup5kvtCCR reconstruction comparison"></video>
      <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
     </figure>
    </div>
    <div class="film-slot">
     <figure data-center-each data-scene="00813-svBbv1Pavdk" class="film" id="scene-00813-svBbv1Pavdk">
-     <video controls muted loop playsinline preload="auto" poster="media/00813-svBbv1Pavdk-replay.jpg?v=fast" src="media/00813-svBbv1Pavdk-replay.mp4?v=scroll30" aria-label="00813-svBbv1Pavdk reconstruction comparison"></video>
+     <video controls muted loop playsinline preload="none" poster="media/00813-svBbv1Pavdk-replay.jpg?v=fast" src="media/00813-svBbv1Pavdk-replay.mp4?v=scroll30" aria-label="00813-svBbv1Pavdk reconstruction comparison"></video>
      <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
     </figure>
    </div>
    <div class="film-slot">
     <figure data-scene="00860-RJaJt8UjXav" class="film" id="scene-00860-RJaJt8UjXav">
-     <video controls muted loop playsinline preload="auto" poster="media/00860-RJaJt8UjXav-replay.jpg?v=fast" src="media/00860-RJaJt8UjXav-replay.mp4?v=scroll30" aria-label="00860-RJaJt8UjXav reconstruction comparison"></video>
+     <video controls muted loop playsinline preload="none" poster="media/00860-RJaJt8UjXav-replay.jpg?v=fast" src="media/00860-RJaJt8UjXav-replay.mp4?v=scroll30" aria-label="00860-RJaJt8UjXav reconstruction comparison"></video>
      <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
     </figure>
    </div>
    <div class="film-slot">
     <figure data-center-each data-scene="00879-7Ukhou1GxYi" class="film" id="scene-00879-7Ukhou1GxYi">
-     <video controls muted loop playsinline preload="auto" poster="media/00879-7Ukhou1GxYi-replay.jpg?v=fast" src="media/00879-7Ukhou1GxYi-replay.mp4?v=scroll30" aria-label="00879-7Ukhou1GxYi reconstruction comparison"></video>
+     <video controls muted loop playsinline preload="none" poster="media/00879-7Ukhou1GxYi-replay.jpg?v=fast" src="media/00879-7Ukhou1GxYi-replay.mp4?v=scroll30" aria-label="00879-7Ukhou1GxYi reconstruction comparison"></video>
      <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
     </figure>
    </div>
@@ -451,121 +451,142 @@ summary:hover {color: var(--ink)}
 <script type="module" src="js/figure-detail.js"></script>
 <script src="js/contents.js?v=scroll-play"></script>
 <script>
-const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
-const clips=[...document.querySelectorAll('video')];
-const deniedPlayback=new Set();
-const interruptedPlayback=new Map();
-function rememberInterruption(clip) {
-  if(!interruptedPlayback.has(clip)) {
-    interruptedPlayback.set(clip,{position:clip.currentTime,at:performance.now()});
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const clips = [...document.querySelectorAll('video')];
+const visibleClips = new Set();
+const deniedPlayback = new Set();
+const clocks = new Map(clips.map(clip => [clip, {
+  position: 0, startedAt: null, decoding: false, align: false
+}]));
+
+function playhead(clock, now) {
+  return clock.position + (clock.startedAt === null ? 0 : (now - clock.startedAt) / 1000);
+}
+function alignPlayback(clip) {
+  const clock = clocks.get(clip);
+  if (!clock.align || !Number.isFinite(clip.duration) || !clip.duration) return;
+  const phase = playhead(clock, performance.now()) % clip.duration;
+  // Let a fresh decoder present its first frames without a tiny startup seek.
+  const tolerance = clip.played.length ? .12 : .85;
+  if (Math.abs(clip.currentTime - phase) <= tolerance) {
+    clock.align = false;
+    return;
+  }
+  for (let i = 0; i < clip.seekable.length; i++) {
+    if (phase < clip.seekable.start(i) || phase > clip.seekable.end(i)) continue;
+    clock.align = false;
+    clip.currentTime = phase;
+    return;
+  }
+  // Some static hosts serve the whole MP4 with no byte-range support.
+  if (clip.buffered.length && clip.buffered.end(clip.buffered.length - 1) >= clip.duration - .04) {
+    recoverReplay(clip, 'force-cache');
   }
 }
-function alignAfterInterruption(clip) {
-  const saved=interruptedPlayback.get(clip);
-  if(!saved || !Number.isFinite(clip.duration) || !clip.seekable.length) return;
-  const phase=(saved.position+(performance.now()-saved.at)/1000)%clip.duration;
-  interruptedPlayback.delete(clip);
-  if(Math.abs(phase-clip.currentTime)>.35 && phase>=clip.seekable.start(0) &&
-     phase<=clip.seekable.end(clip.seekable.length-1)) clip.currentTime=phase;
-}
-function shouldPlay(clip) {
-  return !document.hidden && !clip.closest('.film[data-orbit-ready]') &&
-    !clip.hasAttribute('data-user-paused') &&
-    (!reducedMotion.matches || clip.hasAttribute('data-manual-play'));
-}
 function startPlayback(clip) {
-  if(!shouldPlay(clip) || !clip.paused) return;
-  clip.play().then(()=>deniedPlayback.delete(clip)).catch(error=>{
-    if(error.name==='NotAllowedError' && shouldPlay(clip)) {
+  if (!clocks.get(clip).decoding || !clip.paused) return;
+  alignPlayback(clip);
+  clip.play().then(() => deniedPlayback.delete(clip)).catch(error => {
+    if (error.name === 'NotAllowedError' && clocks.get(clip).decoding) {
       deniedPlayback.add(clip);
-      rememberInterruption(clip);
+      clocks.get(clip).align = true;
     }
   });
 }
 function syncPlayback() {
-  for(const clip of clips) {
-    if(shouldPlay(clip)) startPlayback(clip);
-    else {
-      interruptedPlayback.delete(clip);
-      if(!clip.paused) clip.pause();
+  const now = performance.now();
+  const explorer = document.querySelector('.film[data-exploring]');
+  for (const clip of clips) {
+    const clock = clocks.get(clip);
+    const advance = !document.hidden && !explorer?.contains(clip) &&
+      !clip.hasAttribute('data-user-paused') &&
+      (!reducedMotion.matches || clip.hasAttribute('data-manual-play'));
+    if (advance !== (clock.startedAt !== null)) {
+      // An explicit pause holds the displayed frame, including after slow buffering.
+      clock.position = clock.decoding && clip.readyState >= 2 && !clip.seeking
+        ? clip.currentTime : playhead(clock, now);
+      clock.startedAt = advance ? now : null;
+    }
+    // Offscreen replays keep their place on the page clock without decoding frames.
+    const decode = advance && !explorer && visibleClips.has(clip);
+    if (decode !== clock.decoding) {
+      if (!decode && advance && !clip.paused && !clip.seeking && clip.readyState >= 2) {
+        // Continue the offscreen clock from the frame the visitor actually saw.
+        clock.position = clip.currentTime;
+        clock.startedAt = now;
+      }
+      clock.decoding = decode;
+      clock.align = decode;
+    }
+    if (!decode) {
+      deniedPlayback.delete(clip);
+      if (!clip.paused) clip.pause();
     }
   }
+  // Release old decoders before another row or the large hero starts.
+  for (const clip of visibleClips) startPlayback(clip);
 }
 // Some networks fail a video byte-range request even though the complete MP4 is readable.
-async function recoverReplay(clip) {
-  if(clip.hasAttribute('data-retried') || !clip.error || clip.error.code===1) return;
+async function recoverReplay(clip, cache) {
+  if(clip.hasAttribute('data-retried')) return;
   clip.dataset.retried='';
   try {
-    const response=await fetch(clip.currentSrc || clip.src,{cache:'reload'});
+    const response=await fetch(clip.currentSrc || clip.src,{cache});
     if(!response.ok) return;
     const blob=await response.blob();
+    clocks.get(clip).align = clocks.get(clip).decoding;
     clip.src=URL.createObjectURL(blob);
     clip.load();
     startPlayback(clip);
   } catch { /* Keep the poster and the manual replay control available. */ }
 }
-// The page starts every clip immediately. Only retry if the browser suspended one.
-const interruptedObserver=new IntersectionObserver(entries=>{
-  for(const {target,isIntersecting} of entries) {
-    if(isIntersecting && target.paused && shouldPlay(target)) startPlayback(target);
+const visibleObserver = new IntersectionObserver(entries => {
+  for (const {target, isIntersecting, intersectionRatio} of entries) {
+    const visible = isIntersecting && (target.id !== 'cinema-film' || intersectionRatio >= .25);
+    if (visible) visibleClips.add(target);
+    else visibleClips.delete(target);
   }
-});
-for(const clip of clips){
+  syncPlayback();
+}, {threshold: [0, .25]});
+const bufferObserver = new IntersectionObserver(entries => {
+  for (const {target, isIntersecting} of entries) {
+    if (!isIntersecting) continue;
+    if (!reducedMotion.matches && !navigator.connection?.saveData) target.preload = 'auto';
+    bufferObserver.unobserve(target);
+  }
+}, {rootMargin: '240px 0px'});
+for (const clip of clips) {
   clip.muted = true;
-  interruptedObserver.observe(clip);
-  clip.addEventListener('playing',()=>alignAfterInterruption(clip));
-  clip.addEventListener('pause',()=>{
-    if(shouldPlay(clip) && clip.paused) rememberInterruption(clip);
+  visibleObserver.observe(clip);
+  bufferObserver.observe(clip);
+  // Seek once on entry, as soon as this browser exposes a seekable range.
+  for (const event of ['loadeddata', 'canplay', 'playing', 'progress']) {
+    clip.addEventListener(event, () => alignPlayback(clip));
+  }
+  clip.addEventListener('error', () => {
+    if (clip.error && clip.error.code !== 1) recoverReplay(clip, 'reload');
   });
-  clip.addEventListener('error',()=>recoverReplay(clip));
 }
-document.addEventListener('visibilitychange',syncPlayback);
-document.addEventListener('replay-choice',event=>{
-  interruptedPlayback.delete(event.target);
-  startPlayback(event.target);
-});
+document.addEventListener('visibilitychange', syncPlayback);
+document.addEventListener('replay-choice', syncPlayback);
 function retryDeniedPlayback() {
-  for(const clip of deniedPlayback) startPlayback(clip);
+  for (const clip of deniedPlayback) startPlayback(clip);
 }
-document.addEventListener('click',retryDeniedPlayback);
-document.addEventListener('keydown',retryDeniedPlayback);
-reducedMotion.addEventListener('change',()=>{
-  for(const clip of clips) clip.removeAttribute('data-manual-play');
+document.addEventListener('click', retryDeniedPlayback);
+document.addEventListener('keydown', retryDeniedPlayback);
+reducedMotion.addEventListener('change', () => {
+  for (const clip of clips) clip.removeAttribute('data-manual-play');
   syncPlayback();
 });
 syncPlayback();
 </script>
 <script>
-const room = document.getElementById('cinema-film');
-room.defaultPlaybackRate = 1;
-room.playbackRate = room.defaultPlaybackRate;
 const sceneAnchor = location.hash.match(/^#(scene-.+)-\d+$/);
 if (sceneAnchor && document.getElementById(sceneAnchor[1])) {
   history.replaceState(history.state, '', location.pathname + location.search + '#' + sceneAnchor[1]);
   document.getElementById(sceneAnchor[1]).scrollIntoView();
 }
-const matchingReplay = document.querySelector('#scene-00848-ziup5kvtCCR video');
-matchingReplay.defaultPlaybackRate = matchingReplay.playbackRate = room.defaultPlaybackRate;
-let lastReplay;
-for (const replay of [room, matchingReplay]) {
-  let handoffFrom;
-  function alignReplay() {
-    if (!handoffFrom || !Number.isFinite(replay.duration)) return;
-    const phase = handoffFrom.currentTime % replay.duration;
-    if (!replay.seekable.length || replay.seekable.end(replay.seekable.length - 1) < phase) return;
-    handoffFrom = null;
-    if (Math.abs(replay.currentTime - phase) > 1 / 30) replay.currentTime = phase;
-  }
-  replay.addEventListener('play', () => {
-    if (lastReplay === replay) return;
-    handoffFrom = lastReplay;
-    lastReplay = replay;
-    alignReplay();
-  });
-  replay.addEventListener('loadedmetadata', alignReplay);
-  replay.addEventListener('playing', alignReplay);
-}
 </script>
-<script type="module" src="js/scene-explorer.js?v=retina-warm"></script>
+<script type="module" src="js/scene-explorer.js?v=motion-lod-1"></script>
 </body>
 </html>

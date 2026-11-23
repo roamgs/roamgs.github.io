@@ -53,7 +53,7 @@ function programFor(gl) {
   return program;
 }
 
-function upload(gl,{vertices,sample},order) {
+function upload(gl,{vertices,order}) {
   const vao=gl.createVertexArray();
   gl.bindVertexArray(vao);
   gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());
@@ -65,7 +65,7 @@ function upload(gl,{vertices,sample},order) {
   const indices=gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indices);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,order,gl.DYNAMIC_DRAW);
-  return {vao,indices,sample,count:order.length};
+  return {vao,count:order.length};
 }
 
 function camera(yaw,pitch) {
@@ -84,13 +84,16 @@ function projectedBounds(sample,right,up) {
 }
 
 export function createRenderer(canvas,blobs,centerEach,onReady,onError) {
-  const worker=new Worker(new URL('./splat-sort.js?v=blob-ply',import.meta.url),{type:'module'});
-  let gl, loc, models, orders, frame=0, sortedYaw=.93, sortedPitch=.64;
-  let yaw=sortedYaw, pitch=sortedPitch, zoom=1, visible=false, sorting=true, disposed=false;
+  const worker=new Worker(new URL('./splat-sort.js?v=motion-lod-1',import.meta.url),{type:'module'});
+  const levels={};
+  let gl, loc, samples, frame=0;
+  const initialYaw=.93, initialPitch=.64;
+  let yaw=initialYaw, pitch=initialPitch, zoom=1, visible=false, sorting=false, disposed=false;
   let geometry, geometryYaw, geometryPitch, settleTimer, interacting=false;
   worker.onerror=onError;
-  worker.postMessage({blobs,yaw,pitch,back:camera(yaw,pitch).back});
-  function initialize(panels,indices) {
+  const motionBudget=matchMedia('(pointer:coarse)').matches ? 36000 : 64000;
+  worker.postMessage({blobs,motionBudget,back:camera(yaw,pitch).back});
+  function initialize(panels) {
     gl=canvas.getContext('webgl2',{alpha:false,antialias:false,depth:false,stencil:false,powerPreference:'high-performance'});
     if(!gl) throw Error('WebGL 2 unavailable');
     const program=programFor(gl);
@@ -99,44 +102,59 @@ export function createRenderer(canvas,blobs,centerEach,onReady,onError) {
     gl.uniform1f(loc.maxPointSize,gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE)[1]);
     gl.enable(gl.BLEND); gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
     gl.clearColor(1,1,1,1);
-    models=panels.map((panel,i)=>upload(gl,panel,indices[i]));
+    samples=panels.map(panel=>panel.sample);
+    for(const level of ['full','motion']) {
+      levels[level]={
+        models:panels.map(panel=>upload(gl,panel[level])),
+        orders:panels.map(panel=>panel[level].order),
+        yaw:initialYaw,pitch:initialPitch,dirty:false
+      };
+    }
   }
   worker.onmessage=({data})=>{
     if(disposed) return;
     if(data.error) {onError(Error(data.error)); return;}
     try {
-      const first=!!data.panels;
-      if(first) initialize(data.panels,data.orders);
+      if(data.panels) {initialize(data.panels); onReady();}
       else {
-        for(const [i,model] of models.entries()) {
-          gl.bindVertexArray(model.vao);
-          gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER,0,data.orders[i]);
-        }
+        const layer=levels[data.level];
+        layer.yaw=data.yaw; layer.pitch=data.pitch;
+        layer.orders=data.orders; layer.dirty=true;
+        sorting=false;
       }
-      orders=data.orders; sorting=false;
-      sortedYaw=data.yaw; sortedPitch=data.pitch;
-      if(first) onReady();
       schedule();
     } catch(error) {onError(error);}
   };
   function schedule() {
-    if(visible && models && !frame) frame=requestAnimationFrame(render);
+    if(visible && samples && !frame) frame=requestAnimationFrame(render);
   }
   function render() {
     frame=0;
     const {right,up,back}=camera(yaw,pitch);
-    const delta=Math.abs(yaw-sortedYaw)+Math.abs(pitch-sortedPitch);
-    if(!sorting && delta>(interacting ? .045 : 0)) {
+    const target=interacting?'motion':'full';
+    const layer=levels[target];
+    const delta=Math.abs(yaw-layer.yaw)+Math.abs(pitch-layer.pitch);
+    // Keep displaying the responsive surface until the dense depth order for
+    // the final pose arrives. Never draw a million stale points between tiers.
+    const display=(!interacting && delta>0) ? levels.motion : layer;
+    if(display.dirty) {
+      for(const [i,model] of display.models.entries()) {
+        gl.bindVertexArray(model.vao);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,display.orders[i],gl.DYNAMIC_DRAW);
+      }
+      display.dirty=false;
+    }
+    if(!sorting && delta>(interacting ? .035 : 0)) {
       sorting=true;
-      worker.postMessage({yaw,pitch,back,orders},orders.map(order=>order.buffer));
-      orders=null;
+      worker.postMessage({level:target,yaw,pitch,back,orders:layer.orders},layer.orders.map(order=>order.buffer));
+      layer.dirty=false;
     }
     // Keep the backing store stable across pointer events on high-density displays.
     const dpr=Math.min(devicePixelRatio,2);
     const w=Math.max(1,Math.round(canvas.clientWidth*dpr/2)), h=Math.max(1,Math.round(canvas.clientHeight*dpr));
     if(canvas.width!==2*w || canvas.height!==h) { canvas.width=2*w; canvas.height=h; }
     if(!geometry || geometryYaw!==yaw || geometryPitch!==pitch) {
-      geometry=models.map(model=>projectedBounds(model.sample,right,up));
+      geometry=samples.map(sample=>projectedBounds(sample,right,up));
       geometryYaw=yaw; geometryPitch=pitch;
     }
     const [a,b]=geometry;
@@ -146,7 +164,7 @@ export function createRenderer(canvas,blobs,centerEach,onReady,onError) {
     gl.uniform2f(loc.panelSize,w,h);
     gl.uniform1f(loc.pixelsPerMeter,.91*zoom*Math.min(w/Math.max(.01,x1-x0),h/Math.max(.01,y1-y0)));
     gl.enable(gl.SCISSOR_TEST);
-    for(const [i,model] of models.entries()) {
+    for(const [i,model] of display.models.entries()) {
       const box=centerEach?geometry[i]:{x0,x1,y0,y1};
       gl.uniform2f(loc.offset,(box.x0+box.x1)/2,(box.y0+box.y1)/2);
       gl.viewport(i*w,0,w,h); gl.scissor(i*w,0,w,h);
@@ -158,9 +176,9 @@ export function createRenderer(canvas,blobs,centerEach,onReady,onError) {
   return {
     draw(y,p,z,moving=false) {
       yaw=y; pitch=p; zoom=z; visible=true;
+      interacting=moving; clearTimeout(settleTimer);
       if(moving) {
-        interacting=true; clearTimeout(settleTimer);
-        settleTimer=setTimeout(()=>{interacting=false; schedule();},140);
+        settleTimer=setTimeout(()=>{interacting=false; schedule();},180);
       }
       schedule();
     },

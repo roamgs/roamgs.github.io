@@ -2,7 +2,11 @@
 let models;
 const mix = (a,b,t) => a+(b-a)*t;
 
-function decode(buffer) {
+function sortable(positions) {
+  return {positions,bins:new Uint32Array(4096),depths:new Int32Array(positions.length/3)};
+}
+
+function decode(buffer,motionBudget) {
   const prefix=new TextDecoder().decode(new Uint8Array(buffer,0,Math.min(2048,buffer.byteLength)));
   const end=prefix.indexOf('end_header\n');
   if(end<0) throw Error('Missing PLY header');
@@ -16,6 +20,15 @@ function decode(buffer) {
   const packed=new Uint32Array(buffer,offset,count*4);
   const vertices=new Float32Array(count*10), colors=new Uint8Array(vertices.buffer);
   const positions=new Float32Array(count*3);
+  // These files are in Morton order. Preserve a high-coverage Gaussian in each
+  // spatial group, so thin surfaces remain visible while rotating either panel.
+  const groupSize=Math.ceil(count/motionBudget);
+  const motionCount=Math.ceil(count/groupSize);
+  const motionPositions=new Float32Array(motionCount*3);
+  const motionVertices=new Uint32Array(motionCount*10);
+  const motionCovariances=new Float32Array(motionVertices.buffer);
+  const vertexWords=new Uint32Array(vertices.buffer);
+  let bestScore=-1, groupScore=0, representative=0;
   const stride=Math.max(1,Math.ceil(count/4096));
   const sample=new Float32Array(Math.ceil(count/stride)*3);
   const q=new Float64Array(4);
@@ -56,8 +69,28 @@ function decode(buffer) {
     colors[c+1]=Math.round(255*mix(bounds[b+13],bounds[b+16],((color>>>16)&255)/255));
     colors[c+2]=Math.round(255*mix(bounds[b+14],bounds[b+17],((color>>>8)&255)/255));
     colors[c+3]=color&255;
+    const score=colors[c+3]*Math.sqrt(sx*sy+sy*sz+sx*sz);
+    groupScore+=score;
+    if(score>bestScore) {bestScore=score; representative=i;}
+    if((i+1)%groupSize===0 || i===count-1) {
+      const group=Math.floor(i/groupSize);
+      const src=representative*10;
+      motionVertices.set(vertexWords.subarray(src,src+10),group*10);
+      // Compensate for removed opacity-weighted area. Cap the footprint to
+      // keep isolated walls and thin edges sharp as the camera moves.
+      const footprint=bestScore>0 ? Math.min(2.5,groupScore/bestScore) : 1;
+      const covariance=group*10+3;
+      for(let j=covariance;j<covariance+6;j++) motionCovariances[j]*=footprint;
+      const pos=representative*3;
+      motionPositions.set(positions.subarray(pos,pos+3),group*3);
+      bestScore=-1; groupScore=0;
+    }
   }
-  return {positions,vertices,sample,bins:new Uint32Array(4096),depths:new Int32Array(count)};
+  return {
+    sample,
+    full:{vertices,...sortable(positions)},
+    motion:{vertices:motionVertices,...sortable(motionPositions)}
+  };
 }
 
 function sort(model,back,order) {
@@ -84,18 +117,27 @@ function sort(model,back,order) {
 
 self.onmessage=async ({data})=>{
   try {
-    let panels;
     if(data.blobs) {
-      models=await Promise.all(data.blobs.map(async blob=>decode(await blob.arrayBuffer())));
-      panels=models.map(model=>{
-        const {vertices,sample}=model;
-        delete model.vertices; delete model.sample;
-        return {vertices,sample};
+      models=await Promise.all(data.blobs.map(async blob=>decode(await blob.arrayBuffer(),data.motionBudget)));
+      const transfer=[];
+      const panels=models.map(model=>{
+        const panel={sample:model.sample};
+        transfer.push(model.sample.buffer);
+        delete model.sample;
+        for(const level of ['full','motion']) {
+          const layer=model[level];
+          const order=sort(layer,data.back,new Uint32Array(layer.depths.length));
+          panel[level]={vertices:layer.vertices,order};
+          transfer.push(layer.vertices.buffer,order.buffer);
+          delete layer.vertices;
+        }
+        return panel;
       });
+      self.postMessage({panels},transfer);
+      return;
     }
-    const orders=models.map((model,i)=>sort(model,data.back,data.orders?.[i] || new Uint32Array(model.depths.length)));
-    const transfer=orders.map(order=>order.buffer);
-    for(const panel of panels || []) transfer.push(panel.vertices.buffer,panel.sample.buffer);
-    self.postMessage({panels,orders,yaw:data.yaw,pitch:data.pitch},transfer);
+    const {level,yaw,pitch}=data;
+    const orders=models.map((model,i)=>sort(model[level],data.back,data.orders[i]));
+    self.postMessage({level,yaw,pitch,orders},orders.map(order=>order.buffer));
   } catch(error) { self.postMessage({error:String(error)}); }
 };
