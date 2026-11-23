@@ -23,8 +23,8 @@ function decode(buffer,motionBudget) {
   const positions=new Float32Array(count*3);
   // These files are in Morton order. Preserve a high-coverage Gaussian in each
   // spatial group, so thin surfaces remain visible while rotating either panel.
-  const groupSize=Math.ceil(count/motionBudget);
-  const motionCount=Math.ceil(count/groupSize);
+  const groupSize=motionBudget ? Math.ceil(count/motionBudget) : 0;
+  const motionCount=groupSize ? Math.ceil(count/groupSize) : 0;
   const motionPositions=new Float32Array(motionCount*3);
   const motionVertices=new Uint32Array(motionCount*10);
   const motionCovariances=new Float32Array(motionVertices.buffer);
@@ -72,6 +72,7 @@ function decode(buffer,motionBudget) {
     colors[c+1]=Math.round(255*mix(bounds[b+13],bounds[b+16],((color>>>16)&255)/255));
     colors[c+2]=Math.round(255*mix(bounds[b+14],bounds[b+17],((color>>>8)&255)/255));
     colors[c+3]=color&255;
+    if(!groupSize) continue;
     const score=colors[c+3]*Math.sqrt(sx*sy+sy*sz+sx*sz);
     groupScore+=score;
     if(score>bestScore) {bestScore=score; representative=i;}
@@ -127,7 +128,7 @@ self.onmessage=async ({data})=>{
         const panel={sample:model.sample};
         transfer.push(model.sample.buffer);
         delete model.sample;
-        for(const level of ['full','motion']) {
+        for(const level of (data.motionBudget ? ['full','motion'] : ['full'])) {
           const layer=model[level];
           const order=sort(layer,data.back,new Uint32Array(layer.depths.length));
           panel[level]={vertices:layer.vertices,order};

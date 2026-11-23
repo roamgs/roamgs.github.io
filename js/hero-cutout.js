@@ -1,8 +1,35 @@
+(() => {
 // Use the same decoded frame for the room and its silhouette.
 const film = document.getElementById('cinema-film');
 const stage = film.closest('.hero-scene');
 const canvas = stage.querySelector('canvas');
-let gl, texture, frameCallback, visible = false, lastTime = -1;
+let gl, texture, frameCallback, visible = false, lastTime = -1, needsResize = true;
+
+function useNativeCutout() {
+  // A file URL cannot be used as a WebGL video texture in some browsers.
+  // These local, transparent replays can be composited directly by the browser.
+  const source = nativeHeroSource(film);
+  film.dataset.nativeAlpha = '';
+  film.style.opacity = '1';
+  canvas.style.display = 'none';
+  if (frameCallback != null) {
+    if (film.cancelVideoFrameCallback) film.cancelVideoFrameCallback(frameCallback);
+    else cancelAnimationFrame(frameCallback);
+    frameCallback = null;
+  }
+  stage.dataset.cutoutReady = '';
+  film.addEventListener('error', () => {
+    // Keep the regular H.264 replay usable if this browser lacks alpha decoding.
+    film.src = 'media/hero.mp4?v=native30';
+    syncPlayback();
+  }, {once:true});
+  if (film.src !== source) film.src = source;
+  syncPlayback();
+}
+if (location.protocol === 'file:') {
+  useNativeCutout();
+  return;
+}
 
 function setup() {
   gl = canvas.getContext('webgl', {alpha:true, premultipliedAlpha:true, antialias:false, depth:false});
@@ -53,17 +80,31 @@ function update() {
     }
     return;
   }
-  if (gl?.isContextLost() || (!texture && !setup())) return;
+  if (film.hasAttribute('data-native-alpha') || gl?.isContextLost()) return;
+  if (!texture && !setup()) {
+    useNativeCutout();
+    return;
+  }
   if (lastTime !== film.currentTime) {
-    if (canvas.width !== film.videoWidth || canvas.height !== film.videoHeight) {
-      canvas.width = film.videoWidth;
-      canvas.height = film.videoHeight;
+    if (needsResize) {
+      const scale = Math.min(1, devicePixelRatio * Math.min(
+        stage.clientWidth / film.videoWidth, stage.clientHeight / film.videoHeight
+      ));
+      canvas.width = Math.max(1, Math.round(film.videoWidth * scale));
+      canvas.height = Math.max(1, Math.round(film.videoHeight * scale));
       gl.viewport(0, 0, canvas.width, canvas.height);
+      needsResize = false;
     }
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, film);
+    try {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, film);
+    } catch (error) {
+      if (error.name !== 'SecurityError') throw error;
+      useNativeCutout();
+      return;
+    }
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     lastTime = film.currentTime;
-    stage.dataset.cutoutReady = '';
+    if (!stage.hasAttribute('data-cutout-ready')) stage.dataset.cutoutReady = '';
   }
   if (frameCallback == null && !film.paused) {
     const next = () => {frameCallback = null; update();};
@@ -76,7 +117,15 @@ canvas.addEventListener('webglcontextlost', event=>{
   lastTime=-1;
 });
 canvas.addEventListener('webglcontextrestored', ()=>{texture=null; lastTime=-1; update();});
+function resize() {
+  needsResize = true;
+  lastTime = -1;
+  update();
+}
+new ResizeObserver(resize).observe(stage);
+film.addEventListener('resize', resize);
 new IntersectionObserver(([entry])=>{visible=entry.isIntersecting;update();}).observe(stage);
 new MutationObserver(update).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 for(const event of ['loadeddata','playing','seeked']) film.addEventListener(event,update);
 document.addEventListener('visibilitychange',update);
+})();

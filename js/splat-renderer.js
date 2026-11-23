@@ -83,17 +83,16 @@ function projectedBounds(sample,right,up) {
   return {x0,x1,y0,y1};
 }
 
-export function createRenderer(canvas,blobs,centerEach,onReady,onError) {
-  const worker=new Worker(new URL('./splat-sort.js?v=compact-orbit-1',import.meta.url),{type:'module'});
-  const levels={};
-  let gl, loc, samples, frame=0;
-  const initialYaw=.93, initialPitch=.64;
-  let yaw=initialYaw, pitch=initialPitch, zoom=1, visible=false, sorting=false, disposed=false;
-  let geometry, geometryYaw, geometryPitch, settleTimer, interacting=false;
-  worker.onerror=onError;
+export function createRenderer(canvas,blobs,centerEach,onReady,onError,detailedFirst=false) {
+  const workerURL=new URL('./splat-sort.js?v=progressive-orbit-1',import.meta.url);
+  const shim=location.protocol==='file:' ? URL.createObjectURL(new Blob(
+    ['import '+JSON.stringify(workerURL.href)],{type:'text/javascript'})) : null;
   const motionBudget=matchMedia('(pointer:coarse)').matches ? 36000 : 64000;
-  worker.postMessage({blobs,motionBudget,back:camera(yaw,pitch).back});
-  function initialize(panels) {
+  let gl,loc,samples,starter,detail,frame=0,visible=false,disposed=false;
+  let yaw=.93,pitch=.64,zoom=1,interacting=false,settleTimer;
+  let geometry,geometryYaw,geometryPitch,fence;
+
+  function initializeGL() {
     gl=canvas.getContext('webgl2',{alpha:false,antialias:false,depth:false,stencil:false,powerPreference:'high-performance'});
     if(!gl) throw Error('WebGL 2 unavailable');
     const program=programFor(gl);
@@ -102,41 +101,83 @@ export function createRenderer(canvas,blobs,centerEach,onReady,onError) {
     gl.uniform1f(loc.maxPointSize,gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE)[1]);
     gl.enable(gl.BLEND); gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
     gl.clearColor(1,1,1,1);
-    samples=panels.map(panel=>panel.sample);
-    for(const level of ['full','motion']) {
-      levels[level]={
-        models:panels.map(panel=>upload(gl,panel[level])),
-        orders:panels.map(panel=>panel[level].order),
-        yaw:initialYaw,pitch:initialPitch,dirty:false
-      };
-    }
   }
-  worker.onmessage=({data})=>{
-    if(disposed) return;
-    if(data.error) {onError(Error(data.error)); return;}
-    try {
-      if(data.panels) {initialize(data.panels); onReady();}
-      else {
-        const layer=levels[data.level];
-        layer.yaw=data.yaw; layer.pitch=data.pitch;
-        layer.orders=data.orders; layer.dirty=true;
-        sorting=false;
-      }
-      schedule();
-    } catch(error) {onError(error);}
-  };
+  function uploadLayer(layer) {
+    layer.models=layer.panels.map(panel=>upload(gl,panel));
+    layer.panels=null;
+  }
+  function load(blobs,budget,onLoaded,onFailed) {
+    const worker=new Worker(shim || workerURL,{type:'module'});
+    const source={worker,sorting:true,layers:null};
+    const startYaw=yaw,startPitch=pitch;
+    worker.onerror=event=>{if(!disposed) onFailed(event);};
+    worker.onmessage=({data})=>{
+      if(disposed) return;
+      if(data.error) {onFailed(Error(data.error)); return;}
+      try {
+        if(data.panels) {
+          source.layers={};
+          for(const key of (budget?['full','motion']:['full'])) {
+            const panels=data.panels.map(panel=>panel[key]);
+            source.layers[key]={panels,orders:panels.map(panel=>panel.order),
+              models:null,yaw:startYaw,pitch:startPitch,dirty:false};
+          }
+          onLoaded(data.panels);
+        } else {
+          const layer=source.layers[data.level];
+          layer.yaw=data.yaw; layer.pitch=data.pitch;
+          layer.orders=data.orders; layer.dirty=true;
+        }
+        source.sorting=false;
+        schedule();
+      } catch(error) {onFailed(error);}
+    };
+    worker.postMessage({blobs,motionBudget:budget,back:camera(startYaw,startPitch).back});
+    return source;
+  }
+  try {
+    starter=load(blobs,detailedFirst ? motionBudget : 0,panels=>{
+      initializeGL();
+      samples=panels.map(panel=>panel.sample);
+      uploadLayer(starter.layers.full);
+      if(detailedFirst) uploadLayer(starter.layers.motion);
+      onReady();
+    },onError);
+  } catch(error) {if(shim) URL.revokeObjectURL(shim); throw error;}
+
   function schedule() {
     if(visible && samples && !frame) frame=requestAnimationFrame(render);
   }
   function render() {
     frame=0;
+    // Leave an overloaded GPU one frame in flight. Inputs keep updating the
+    // camera while we wait, so obsolete viewpoints never accumulate in a queue.
+    if(fence) {
+      if(gl.clientWaitSync(fence,0,0)===gl.TIMEOUT_EXPIRED) {
+        schedule(); return;
+      }
+      gl.deleteSync(fence); fence=null;
+    }
     const {right,up,back}=camera(yaw,pitch);
-    const target=interacting?'motion':'full';
-    const layer=levels[target];
+    const source=!interacting && detail?.layers ? detail : starter;
+    const target=interacting && detailedFirst ? 'motion' : 'full';
+    const layer=source.layers[target];
     const delta=Math.abs(yaw-layer.yaw)+Math.abs(pitch-layer.pitch);
-    // Keep displaying the responsive surface until the dense depth order for
-    // the final pose arrives. Never draw a million stale points between tiers.
-    const display=(!interacting && delta>0) ? levels.motion : layer;
+    // Upload one detail panel per idle frame. If input resumes, keep using the
+    // interactive geometry and finish the upload at the next resting pose.
+    if(source===detail && !layer.models && !source.sorting && delta===0) {
+      layer.uploading ??= [];
+      const i=layer.uploading.length;
+      layer.uploading.push(upload(gl,{vertices:layer.panels[i].vertices,order:layer.orders[i]}));
+      if(i===0) {layer.uploadYaw=yaw; layer.uploadPitch=pitch;}
+      if(layer.uploading.length===layer.panels.length) {
+        layer.models=layer.uploading; layer.panels=null;
+        layer.dirty=layer.uploadYaw!==yaw || layer.uploadPitch!==pitch;
+      } else schedule();
+    }
+    let display=layer;
+    if(source===detail && (!layer.models || delta>0)) display=starter.layers.full;
+    else if(detailedFirst && !interacting && delta>0) display=starter.layers.motion;
     if(display.dirty) {
       for(const [i,model] of display.models.entries()) {
         gl.bindVertexArray(model.vao);
@@ -144,9 +185,9 @@ export function createRenderer(canvas,blobs,centerEach,onReady,onError) {
       }
       display.dirty=false;
     }
-    if(!sorting && delta>(interacting ? .035 : 0)) {
-      sorting=true;
-      worker.postMessage({level:target,yaw,pitch,back,orders:layer.orders},layer.orders.map(order=>order.buffer));
+    if(!source.sorting && delta>(interacting ? .035 : 0)) {
+      source.sorting=true;
+      source.worker.postMessage({level:target,yaw,pitch,back,orders:layer.orders},layer.orders.map(order=>order.buffer));
       layer.dirty=false;
     }
     // Keep the backing store stable across pointer events on high-density displays.
@@ -172,8 +213,16 @@ export function createRenderer(canvas,blobs,centerEach,onReady,onError) {
       gl.drawElements(gl.POINTS,model.count,gl.UNSIGNED_INT,0);
     }
     gl.disable(gl.SCISSOR_TEST);
+    if(interacting) fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);
   }
   return {
+    refine(blobs,onFailed) {
+      if(detail || detailedFirst || disposed) return;
+      detail=load(blobs,0,()=>{},error=>{
+        detail.worker.terminate(); detail=null;
+        onFailed(error);
+      });
+    },
     draw(y,p,z,moving=false) {
       yaw=y; pitch=p; zoom=z; visible=true;
       interacting=moving; clearTimeout(settleTimer);
@@ -187,7 +236,8 @@ export function createRenderer(canvas,blobs,centerEach,onReady,onError) {
       cancelAnimationFrame(frame); frame=0; clearTimeout(settleTimer);
     },
     dispose() {
-      disposed=true; cancelAnimationFrame(frame); clearTimeout(settleTimer); worker.terminate();
+      disposed=true; cancelAnimationFrame(frame); clearTimeout(settleTimer); starter.worker.terminate(); detail?.worker.terminate();
+      if(shim) URL.revokeObjectURL(shim);
       gl?.getExtension('WEBGL_lose_context')?.loseContext();
     }
   };

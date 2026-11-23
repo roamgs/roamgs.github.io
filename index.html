@@ -8,12 +8,15 @@
   const galleryReady = new Promise(resolve => {
     document.addEventListener('gallery-ready', resolve, {once: true});
   });
+  // A directly opened HTML file cannot import modules from the local filesystem.
+  const assetBase = location.protocol === 'file:' ? 'https://roamgs.github.io/' : document.baseURI;
+  const explorerURL = new URL('js/scene-explorer.js?v=progressive-orbit-2', assetBase);
   let controls, attempts = 0, pendingButton;
   function loadControls() {
     if (!controls) {
       const retry = attempts ? '&retry=' + attempts : '';
       attempts++;
-      controls = galleryReady.then(() => import('./js/scene-explorer.js?v=static-controls-1' + retry))
+      controls = galleryReady.then(() => import(explorerURL.href + retry))
         .catch(error => { controls = null; throw error; });
     }
     return controls;
@@ -303,7 +306,7 @@ summary:hover {color: var(--ink)}
     <div class="actions"><a class="paper-link" href="#comparison"><svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="19" height="15" rx="3"/><path d="m10 9 5 3-5 3z"/></svg> Watch comparisons</a></div>
   </div>
   <figure class="hero-scene">
-    <video id="cinema-film" class="room" src="media/hero.mp4?v=native30" poster="media/hero-cutout.webp?v=fast" muted loop playsinline preload="metadata" aria-label="ROAM-GS incremental Gaussian reconstruction of HM3D 00848"></video>
+    <video id="cinema-film" class="room" src="media/hero.mp4?v=native30" poster="media/hero-cutout.webp?v=fast" muted loop playsinline preload="none" aria-label="ROAM-GS incremental Gaussian reconstruction of HM3D 00848"></video>
     <canvas class="room-cutout" aria-hidden="true"></canvas>
   </figure>
   <div class="scroll-glass" aria-hidden="true"></div>
@@ -410,6 +413,33 @@ const clocks = new Map(clips.map(clip => [clip, {
   position: 0, startedAt: null, decoding: false, align: false
 }]));
 
+function nativeHeroSource(clip) {
+  const appleAlpha = navigator.vendor === 'Apple Computer, Inc.' && clip.canPlayType('video/mp4; codecs="hvc1"');
+  return new URL(appleAlpha ? 'media/hero-alpha.mov' : 'media/hero-cutout.webm', document.baseURI).href;
+}
+function selectVideoSource(clip) {
+  const clock = clocks.get(clip);
+  if (clock.sourceSelected || clip.hasAttribute('data-native-alpha')) return;
+  const hero = clip.id === 'cinema-film';
+  if (hero && location.protocol === 'file:') {
+    clip.dataset.nativeAlpha = '';
+    clip.src = nativeHeroSource(clip);
+    return;
+  }
+  const width = hero ? Math.min(clip.clientWidth, clip.clientHeight * 19 / 17) : clip.clientWidth;
+  if (!width) return;
+  clock.sourceSelected = true;
+  const connection = navigator.connection;
+  const constrained = connection?.saveData || (connection?.downlink > 0 && connection.downlink <= 3) ||
+    ['slow-2g', '2g', '3g'].includes(connection?.effectiveType);
+  const smallCard = !hero && (width <= 360 || matchMedia('(max-width: 680px)').matches);
+  if (width * devicePixelRatio > (hero ? 798 : 704) && !smallCard && !constrained) return;
+  const url = new URL(clip.src);
+  clock.fullSource = url.href;
+  url.pathname = url.pathname.replace(/[^/]+$/, 'compact/$&');
+  clip.src = url.href;
+}
+
 function playhead(clock, now) {
   return clock.position + (clock.startedAt === null ? 0 : (now - clock.startedAt) / 1000);
 }
@@ -420,6 +450,20 @@ function alignPlayback(clip) {
   // Let a fresh decoder present its first frames without a tiny startup seek.
   const tolerance = clip.played.length ? .12 : .85;
   if (Math.abs(clip.currentTime - phase) <= tolerance) {
+    clock.align = false;
+    return;
+  }
+  if (!clip.buffered.length) return;
+  let buffered = false;
+  for (let i = 0; i < clip.buffered.length; i++) {
+    if (phase >= clip.buffered.start(i) && phase <= clip.buffered.end(i)) {
+      buffered = true;
+      break;
+    }
+  }
+  if (!buffered) {
+    // On range-capable hosts seekable can cover the whole file before it arrives.
+    // Show the available frames immediately on this visit.
     clock.align = false;
     return;
   }
@@ -436,6 +480,7 @@ function alignPlayback(clip) {
 }
 function startPlayback(clip) {
   if (!clocks.get(clip).decoding || !clip.paused) return;
+  selectVideoSource(clip);
   alignPlayback(clip);
   clip.play().then(() => deniedPlayback.delete(clip)).catch(error => {
     if (error.name === 'NotAllowedError' && clocks.get(clip).decoding) {
@@ -446,7 +491,7 @@ function startPlayback(clip) {
 }
 function syncPlayback() {
   const now = performance.now();
-  const explorer = document.querySelector('.film[data-exploring]');
+  const explorer = document.querySelector('.film[data-orbit-ready]');
   for (const clip of clips) {
     const clock = clocks.get(clip);
     const advance = !document.hidden && !explorer?.contains(clip) &&
@@ -467,7 +512,9 @@ function syncPlayback() {
         clock.startedAt = now;
       }
       clock.decoding = decode;
-      clock.align = decode;
+      // A clip visible at page entry can play from its first frame. Slow buffering
+      // must not turn that first presentation into an extra byte-range seek.
+      clock.align = decode && (clip.played.length > 0 || playhead(clock, now) > .85);
     }
     if (!decode) {
       deniedPlayback.delete(clip);
@@ -479,17 +526,21 @@ function syncPlayback() {
 }
 // Some networks fail a video byte-range request even though the complete MP4 is readable.
 async function recoverReplay(clip, cache) {
-  if(clip.hasAttribute('data-retried')) return;
-  clip.dataset.retried='';
+  const clock = clocks.get(clip);
+  const source = clip.src;
+  if (source.startsWith('blob:') || clock.retriedSource === source) return;
+  clock.retriedSource = source;
   try {
-    const response=await fetch(clip.currentSrc || clip.src,{cache});
-    if(!response.ok) return;
-    const blob=await response.blob();
-    clocks.get(clip).align = clocks.get(clip).decoding;
-    clip.src=URL.createObjectURL(blob);
+    const response = await fetch(source, {cache});
+    if (!response.ok || clip.src !== source) return;
+    const blob = await response.blob();
+    if (clip.src !== source) return;
+    clock.align = clock.decoding;
+    clock.blobUrl = URL.createObjectURL(blob);
+    clip.src = clock.blobUrl;
     clip.load();
     startPlayback(clip);
-  } catch { /* Keep the poster and the manual replay control available. */ }
+  } catch { /* Leave the poster and the manual replay control available. */ }
 }
 const visibleObserver = new IntersectionObserver(entries => {
   for (const {target, isIntersecting, intersectionRatio} of entries) {
@@ -502,7 +553,11 @@ const visibleObserver = new IntersectionObserver(entries => {
 const bufferObserver = new IntersectionObserver(entries => {
   for (const {target, isIntersecting} of entries) {
     if (!isIntersecting) continue;
-    if (!reducedMotion.matches && !navigator.connection?.saveData) target.preload = 'auto';
+    if (!reducedMotion.matches && !navigator.connection?.saveData && target.id !== 'cinema-film') {
+      selectVideoSource(target);
+      // Let the visible players use the connection before buffering the next row.
+      if (target.paused) target.preload = 'metadata';
+    }
     bufferObserver.unobserve(target);
   }
 }, {rootMargin: '240px 0px'});
@@ -514,8 +569,24 @@ for (const clip of clips) {
   for (const event of ['loadeddata', 'canplay', 'playing', 'progress']) {
     clip.addEventListener(event, () => alignPlayback(clip));
   }
+  clip.addEventListener('loadstart', () => {
+    const clock = clocks.get(clip);
+    if (clock.blobUrl && clip.src !== clock.blobUrl) {
+      URL.revokeObjectURL(clock.blobUrl);
+      clock.blobUrl = null;
+    }
+  });
   clip.addEventListener('error', () => {
-    if (clip.error && clip.error.code !== 1) recoverReplay(clip, 'reload');
+    if (!clip.error || clip.error.code === 1) return;
+    // The dark hero owns its transparent-video fallback.
+    if (clip.hasAttribute('data-native-alpha') && /\.(mov|webm)(?:[?#]|$)/i.test(clip.src)) return;
+    const clock = clocks.get(clip);
+    if (clock.fullSource && clip.src !== clock.fullSource && !clip.hasAttribute('data-native-alpha')) {
+      clip.src = clock.fullSource;
+      clock.fullSource = null;
+      clock.align = clock.decoding;
+      startPlayback(clip);
+    } else recoverReplay(clip, 'reload');
   });
 }
 document.addEventListener('visibilitychange', syncPlayback);
@@ -652,7 +723,7 @@ if (sceneAnchor && document.getElementById(sceneAnchor[1])) {
 
 </main>
 <footer class="dataset-credits">Scene visualizations are derived from the <a href="https://huggingface.co/datasets/hssd/hssd-hab">Habitat Synthetic Scenes Dataset</a> (<a href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a>) and the <a href="https://github.com/matterport/habitat-matterport-3dresearch">Habitat-Matterport 3D Research Dataset</a> (<a href="https://matterport.com/legal/matterport-end-user-license-agreement-academic-use-model-data">Matterport academic use terms</a>).</footer>
-<script type="module" src="js/hero-cutout.js"></script>
+<script defer src="js/hero-cutout.js?v=display-sized-1"></script>
 <script src="js/gallery-glass.js?v=static-controls-1"></script>
 <script type="module" src="js/paper-checkpoints.js"></script>
 <script type="module" src="js/figure-detail.js"></script>
