@@ -1,4 +1,4 @@
-import {createRenderer} from './splat-renderer.js?v=dense-ply-1';
+import {createRenderer} from './splat-renderer.js?v=dense-ply-2';
 
 const clamp = (n,min,max) => Math.max(min,Math.min(max,n));
 let closeActive;
@@ -20,7 +20,10 @@ function distance(card) {
   return Math.abs(rect.top+rect.height/2-innerHeight/2);
 }
 const nearScene=new IntersectionObserver(entries=>{
-  if(entries.length) queueWarm();
+  for(const {target,isIntersecting} of entries) {
+    if(!isIntersecting && target.dataset.exploring) closeActive?.();
+  }
+  queueWarm();
 },{threshold:[0,.25,.75,1]});
 
 for (const figure of document.querySelectorAll('.film')) {
@@ -57,6 +60,7 @@ for (const figure of document.querySelectorAll('.film')) {
     resize.disconnect();
     renderer?.hide();
     if(canvas) canvas.style.visibility='hidden';
+    if(resume && visibleClips.has(video)) preferredClip=video;
     delete figure.dataset.exploring;
     delete figure.dataset.orbitReady;
     mode.textContent='Explore 3D';
@@ -64,7 +68,7 @@ for (const figure of document.querySelectorAll('.film')) {
     status.textContent='';
     closeActive=null;
     surface.setAttribute('aria-label',(video.paused?'Play ':'Pause ')+figure.dataset.scene+' comparison');
-    clips.forEach(updatePlayback);
+    syncPlayback();
     if(resume && reducedMotion.matches && !document.hidden && visibleClips.has(video) && !video.hasAttribute('data-user-paused')) video.play().catch(()=>{});
     expireLater();
   }
@@ -86,7 +90,7 @@ for (const figure of document.querySelectorAll('.film')) {
   function showScene() {
     if(!figure.dataset.exploring) return;
     figure.dataset.orbitReady='';
-    clips.forEach(updatePlayback);
+    syncPlayback();
     redraw();
     canvas.style.visibility='visible';
     status.textContent=figure.dataset.exploring==='drag' ? 'Release drag to play' : 'Drag to orbit';

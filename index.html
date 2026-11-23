@@ -447,7 +447,7 @@ summary:hover {color: var(--ink)}
 </main>
 <footer class="dataset-credits">Scene visualizations are derived from the <a href="https://huggingface.co/datasets/hssd/hssd-hab">Habitat Synthetic Scenes Dataset</a> (<a href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a>) and the <a href="https://github.com/matterport/habitat-matterport-3dresearch">Habitat-Matterport 3D Research Dataset</a> (<a href="https://matterport.com/legal/matterport-end-user-license-agreement-academic-use-model-data">Matterport academic use terms</a>).</footer>
 <script type="module" src="js/hero-cutout.js"></script>
-<script src="js/gallery-glass.js?v=playback"></script>
+<script src="js/gallery-glass.js?v=playback-slots"></script>
 <script src="js/results.js?v=appendix-normals"></script>
 <script type="module" src="js/paper-checkpoints.js"></script>
 <script type="module" src="js/figure-detail.js"></script>
@@ -458,9 +458,24 @@ const clips=[...document.querySelectorAll('video')];
 const visibleClips=new Set();
 
 const queuedClips=new Set();
+const playbackSlots=new Set();
+const smallScreen=matchMedia('(max-width:600px), (pointer:coarse)');
+let preferredClip;
+function syncPlayback() {
+  const candidates=[...visibleClips].filter(clip=>!clip.hasAttribute('data-user-paused'));
+  const score=clip=>{
+    if(clip===preferredClip || clip.closest('.film[data-exploring]')) return -Infinity;
+    const r=clip.getBoundingClientRect();
+    return Math.abs(r.top+r.height/2-innerHeight/2);
+  };
+  candidates.sort((a,b)=>score(a)-score(b));
+  playbackSlots.clear();
+  for(const clip of candidates.slice(0,smallScreen.matches?1:2)) playbackSlots.add(clip);
+  clips.forEach(updatePlayback);
+}
 let startingClip, startTimeout;
 function shouldPlay(clip) {
-  return !document.hidden && visibleClips.has(clip) && !reducedMotion.matches
+  return !document.hidden && playbackSlots.has(clip) && !reducedMotion.matches
     && !clip.hasAttribute('data-user-paused') && !document.querySelector('.film[data-orbit-ready]');
 }
 function startNextClip() {
@@ -483,7 +498,7 @@ function startNextClip() {
 function updatePlayback(clip) {
   if(!shouldPlay(clip)) {
     queuedClips.delete(clip);
-    if (!visibleClips.has(clip) || document.hidden || document.querySelector('.film[data-orbit-ready]')) clip.pause();
+    if (!playbackSlots.has(clip) || document.hidden || document.querySelector('.film[data-orbit-ready]')) clip.pause();
   } else if(clip.paused) {
     queuedClips.add(clip);
     startNextClip();
@@ -502,17 +517,28 @@ const observer=new IntersectionObserver(entries=>{
     const clip=entry.target;
     if(entry.isIntersecting && entry.intersectionRatio>=.20)visibleClips.add(clip);
     else visibleClips.delete(clip);
-    updatePlayback(clip);
   }
-},{threshold:[0,.20]});
+  if(!visibleClips.has(preferredClip)) preferredClip=null;
+  syncPlayback();
+},{threshold:[0,.20,.5,.8,1]});
 for(const clip of clips){
   clip.muted = true;
   observer.observe(clip);
 }
-document.addEventListener('visibilitychange',()=>clips.forEach(updatePlayback));
+document.addEventListener('replay-choice',event=>{
+  preferredClip=event.target.hasAttribute('data-user-paused')?null:event.target;
+  syncPlayback();
+});
+let settleScroll;
+window.addEventListener('scroll',()=>{
+  clearTimeout(settleScroll);
+  settleScroll=setTimeout(()=>{preferredClip=null; syncPlayback();},120);
+},{passive:true});
+document.addEventListener('visibilitychange',syncPlayback);
+smallScreen.addEventListener('change',syncPlayback);
 reducedMotion.addEventListener('change',()=>{
   if(reducedMotion.matches)clips.forEach(clip=>clip.pause());
-  else clips.forEach(updatePlayback);
+  else syncPlayback();
 });
 </script>
 <script>
@@ -546,6 +572,6 @@ for (const replay of [room, matchingReplay]) {
   replay.addEventListener('playing', alignReplay);
 }
 </script>
-<script type="module" src="js/scene-explorer.js?v=dense-ply-1"></script>
+<script type="module" src="js/scene-explorer.js?v=dense-ply-2"></script>
 </body>
 </html>

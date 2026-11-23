@@ -84,7 +84,7 @@ function projectedBounds(sample,right,up) {
 }
 
 export function createRenderer(canvas,urls,centerEach,onReady,onError) {
-  const worker=new Worker(new URL('./splat-sort.js?v=dense-ply-1',import.meta.url),{type:'module'});
+  const worker=new Worker(new URL('./splat-sort.js?v=dense-ply-2',import.meta.url),{type:'module'});
   let gl, loc, models, orders, frame=0, sortedYaw=.93, sortedPitch=.64;
   let yaw=sortedYaw, pitch=sortedPitch, zoom=1, visible=false, sorting=true, disposed=false;
   let geometry, geometryYaw, geometryPitch, settleTimer, interacting=false;
@@ -126,7 +126,7 @@ export function createRenderer(canvas,urls,centerEach,onReady,onError) {
     frame=0;
     const {right,up,back}=camera(yaw,pitch);
     const delta=Math.abs(yaw-sortedYaw)+Math.abs(pitch-sortedPitch);
-    if(!sorting && delta>(interacting?.045:0)) {
+    if(!sorting && delta>(interacting ? .045 : 0)) {
       sorting=true;
       worker.postMessage({yaw,pitch,back,orders},orders.map(order=>order.buffer));
       orders=null;

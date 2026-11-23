@@ -41,16 +41,16 @@ function decode(buffer) {
     }
     q[largest]=Math.sqrt(Math.max(0,1-norm));
     const w=q[0], x=q[1], y=q[2], z=q[3];
-    const a=1-2*(y*y+z*z), d=2*(x*y+w*z), g=2*(x*z-w*y);
-    const h=2*(x*y-w*z), e=1-2*(x*x+z*z), f=2*(y*z+w*x);
-    const l=2*(x*z+w*y), m=2*(y*z-w*x), n=1-2*(x*x+y*y);
+    const r00=1-2*(y*y+z*z), r01=2*(x*y-w*z), r02=2*(x*z+w*y);
+    const r10=2*(x*y+w*z), r11=1-2*(x*x+z*z), r12=2*(y*z-w*x);
+    const r20=2*(x*z-w*y), r21=2*(y*z+w*x), r22=1-2*(x*x+y*y);
     // Six independent elements of R diag(scale²) Rᵀ, in xx,xy,xz,yy,yz,zz order.
-    vertices[k+3]=sx*a*a+sy*h*h+sz*l*l;
-    vertices[k+4]=sx*a*d+sy*h*e+sz*l*m;
-    vertices[k+5]=sx*a*g+sy*h*f+sz*l*n;
-    vertices[k+6]=sx*d*d+sy*e*e+sz*m*m;
-    vertices[k+7]=sx*d*g+sy*e*f+sz*m*n;
-    vertices[k+8]=sx*g*g+sy*f*f+sz*n*n;
+    vertices[k+3]=sx*r00*r00+sy*r01*r01+sz*r02*r02;
+    vertices[k+4]=sx*r00*r10+sy*r01*r11+sz*r02*r12;
+    vertices[k+5]=sx*r00*r20+sy*r01*r21+sz*r02*r22;
+    vertices[k+6]=sx*r10*r10+sy*r11*r11+sz*r12*r12;
+    vertices[k+7]=sx*r10*r20+sy*r11*r21+sz*r12*r22;
+    vertices[k+8]=sx*r20*r20+sy*r21*r21+sz*r22*r22;
     const c=(k+9)*4;
     colors[c]=Math.round(255*mix(bounds[b+12],bounds[b+15],(color>>>24)/255));
     colors[c+1]=Math.round(255*mix(bounds[b+13],bounds[b+16],((color>>>16)&255)/255));
