@@ -38,7 +38,7 @@ body {
 }
 [data-theme="dark"] .room {
   mix-blend-mode:normal;
-  filter:url(#room-background-matte);
+  opacity:0;
 }
 [data-theme="dark"] .scroll-glass {
   inset-block-start:65%;
@@ -97,7 +97,13 @@ body {
   .hero-scene {margin-block-start:0}
 }
 
-[data-theme="dark"] .room[data-alpha] {filter:none}
+.hero-scene .room,.room-cutout {grid-area:1 / 1}
+.room-cutout {display:none;width:100%;height:100%;min-width:0;min-height:0;object-fit:contain;pointer-events:none}
+[data-theme="dark"] .hero-scene {
+  background:url("../media/hero-cutout.webp?v=fast") center / contain no-repeat;
+}
+[data-theme="dark"] .hero-scene[data-cutout-ready] {background:none}
+[data-theme="dark"] .room-cutout {display:block}
 
 @media (max-width:600px) {
   [data-theme="dark"] .hero-scene {margin-block-start:-1.2rem}

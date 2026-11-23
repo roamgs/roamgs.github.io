@@ -204,17 +204,13 @@ summary:hover {color: var(--ink)}
 </style>
 <link rel="stylesheet" href="css/gallery-glass.css?v=scene-assets">
 <link rel="stylesheet" href="css/results.css?v=replica">
-<link rel="stylesheet" href="css/theme.css?v=fast-room">
+<link rel="stylesheet" href="css/theme.css?v=frame-cutout">
 </head>
 <body>
 
 <header class="mast">
     <a class="signature" href="#project" aria-label="ROAM-GS home"><svg class="orbit" viewBox="0 0 72 50" aria-hidden="true" focusable="false">
       <defs>
-        <filter id="room-background-matte" color-interpolation-filters="sRGB" x="0" y="0" width="100%" height="100%">
-          <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -4.5 -8 -4.5 0 16.6"/>
-          <feComposite in="SourceGraphic" operator="in"/>
-        </filter>
         <linearGradient id="orbit-color" gradientUnits="userSpaceOnUse" x1="6" y1="18" x2="66" y2="33">
         <stop stop-color="#512675"/><stop offset=".55" stop-color="#9d2b84"/><stop offset="1" stop-color="#be495b"/>
       </linearGradient></defs>
@@ -263,22 +259,8 @@ summary:hover {color: var(--ink)}
     <div class="actions"><a class="paper-link" href="#comparison"><svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="19" height="15" rx="3"/><path d="m10 9 5 3-5 3z"/></svg> Watch comparisons</a></div>
   </div>
   <figure class="hero-scene">
-    <video id="cinema-film" class="room" poster="media/hero-cutout.webp?v=fast" muted loop playsinline preload="metadata" aria-label="ROAM-GS incremental Gaussian reconstruction of HM3D 00848"></video>
-    <script>
-      (() => {
-        const film = document.getElementById('cinema-film');
-        if (CSS.supports('font', '-apple-system-body') && film.canPlayType('video/mp4; codecs="hvc1"')) {
-          film.dataset.alpha = '';
-          film.addEventListener('error', () => {
-            delete film.dataset.alpha;
-            film.src = 'media/hero.mp4?v=fast';
-          }, {once:true});
-          film.src = 'media/hero-alpha.mov?v=fast';
-        } else {
-          film.src = 'media/hero.mp4?v=fast';
-        }
-      })();
-    </script>
+    <video id="cinema-film" class="room" src="media/hero.mp4?v=fast" poster="media/hero-cutout.webp?v=fast" muted loop playsinline preload="metadata" aria-label="ROAM-GS incremental Gaussian reconstruction of HM3D 00848"></video>
+    <canvas class="room-cutout" aria-hidden="true"></canvas>
   </figure>
   <div class="scroll-glass" aria-hidden="true"></div>
   <div class="transport">
@@ -464,6 +446,7 @@ summary:hover {color: var(--ink)}
 
 </main>
 <footer class="dataset-credits">Scene visualizations are derived from the <a href="https://huggingface.co/datasets/hssd/hssd-hab">Habitat Synthetic Scenes Dataset</a> (<a href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a>) and the <a href="https://github.com/matterport/habitat-matterport-3dresearch">Habitat-Matterport 3D Research Dataset</a> (<a href="https://matterport.com/legal/matterport-end-user-license-agreement-academic-use-model-data">Matterport academic use terms</a>).</footer>
+<script type="module" src="js/hero-cutout.js"></script>
 <script src="js/gallery-glass.js?v=playback"></script>
 <script src="js/results.js?v=appendix-normals"></script>
 <script type="module" src="js/paper-checkpoints.js"></script>
