@@ -507,7 +507,7 @@ function syncPlayback() {
       clock.startedAt = advance ? now : null;
     }
     // Offscreen replays keep their place on the page clock without decoding frames.
-    const decode = advance && !explorer && visibleClips.has(clip);
+    const decode = advance && visibleClips.has(clip);
     if (decode !== clock.decoding) {
       if (!decode && advance && !clip.paused && !clip.seeking && clip.readyState >= 2) {
         // Continue the offscreen clock from the frame the visitor actually saw.
