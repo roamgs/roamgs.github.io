@@ -3,6 +3,52 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+(() => {
+  const galleryReady = new Promise(resolve => {
+    document.addEventListener('gallery-ready', resolve, {once: true});
+  });
+  let controls, attempts = 0, pendingButton;
+  function loadControls() {
+    if (!controls) {
+      const retry = attempts ? '&retry=' + attempts : '';
+      attempts++;
+      controls = galleryReady.then(() => import('./js/scene-explorer.js?v=static-controls-1' + retry))
+        .catch(error => { controls = null; throw error; });
+    }
+    return controls;
+  }
+
+  function setStatus(button, text) {
+    const status = button.parentElement.querySelector('.scene-status');
+    if (status) status.textContent = text;
+  }
+  // Capture clicks even while the browser is still parsing the gallery.
+  document.addEventListener('click', async event => {
+    const button = event.target.closest('.film .scene-mode');
+    if (!button || button.hasAttribute('data-explorer-bound')) return;
+    event.stopPropagation();
+    if (button === pendingButton) return;
+    if (pendingButton) setStatus(pendingButton, '');
+    pendingButton = button;
+    setStatus(button, 'Loading 3D…');
+    try {
+      await loadControls();
+      if (pendingButton !== button) return;
+      if (!button.hasAttribute('data-explorer-bound')) {
+        controls = null;
+        throw new Error('3D control unavailable');
+      }
+      button.click();
+    } catch {
+      if (pendingButton === button) setStatus(button, '3D could not load. Select Explore 3D to retry.');
+    } finally {
+      if (pendingButton === button) pendingButton = null;
+    }
+  }, true);
+  loadControls().catch(() => {});
+})();
+</script>
 <script src="js/theme.js?v=default-light"></script>
 <title>ROAM-GS · Go Far, Look Less</title>
 <link rel="icon" type="image/png" sizes="32x32" href="figures/roam-orbit.png">
@@ -492,47 +538,7 @@ if (sceneAnchor && document.getElementById(sceneAnchor[1])) {
   document.getElementById(sceneAnchor[1]).scrollIntoView();
 }
 </script>
-<script>
-(() => {
-  const gallery = document.getElementById('comparison');
-  let controls, attempts = 0, pendingButton;
-  function loadControls() {
-    if (!controls) {
-      const retry = attempts ? '&retry=' + attempts : '';
-      attempts++;
-      controls = import('./js/scene-explorer.js?v=static-controls-1' + retry)
-        .catch(error => { controls = null; throw error; });
-    }
-    return controls;
-  }
-
-  // Remember the first click if it lands before the controller has attached.
-  gallery.addEventListener('click', async event => {
-    const button = event.target.closest('.scene-mode');
-    if (!button || button.hasAttribute('data-explorer-bound')) return;
-    event.stopPropagation();
-    if (button === pendingButton) return;
-    if (pendingButton) pendingButton.parentElement.querySelector('.scene-status').textContent = '';
-    pendingButton = button;
-    const status = button.parentElement.querySelector('.scene-status');
-    status.textContent = 'Loading 3D…';
-    try {
-      await loadControls();
-      if (pendingButton !== button) return;
-      if (!button.hasAttribute('data-explorer-bound')) {
-        controls = null;
-        throw new Error('3D control unavailable');
-      }
-      button.click();
-    } catch {
-      if (pendingButton === button) status.textContent = '3D could not load. Select Explore 3D to retry.';
-    } finally {
-      if (pendingButton === button) pendingButton = null;
-    }
-  }, true);
-  loadControls().catch(() => {});
-})();
-</script>
+<script>document.dispatchEvent(new Event('gallery-ready'));</script>
 <section class="paper-overview" id="abstract" aria-labelledby="abstract-title">
   <div class="abstract-layout">
     <h2 id="abstract-title">Abstract</h2>
