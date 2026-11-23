@@ -1,46 +1,105 @@
-// A stable back-to-front counting sort for the two Gaussian comparison panels.
+// Decode the fixed PlayCanvas compressed PLY layout and sort away from the UI thread.
 let models;
-let availableOrders;
-self.onmessage=({data})=>{
-  if (data.buffers) {
-    models=data.buffers.map(buffer=>{
-      const count=buffer.byteLength/32;
-      const positions=new Float32Array(count*3);
-      const values=new Float32Array(buffer);
-      for(let i=0;i<count;i++) {
-        positions[i*3]=values[i*8];
-        positions[i*3+1]=values[i*8+1];
-        positions[i*3+2]=values[i*8+2];
-      }
-      return {positions,depths:new Int32Array(count),bins:new Uint32Array(4096)};
-    });
-    return;
+const mix = (a,b,t) => a+(b-a)*t;
+
+function decode(buffer) {
+  const prefix=new TextDecoder().decode(new Uint8Array(buffer,0,Math.min(2048,buffer.byteLength)));
+  const end=prefix.indexOf('end_header\n');
+  if(end<0) throw Error('Missing PLY header');
+  const header=prefix.slice(0,end), start=end+11;
+  const count=Number(header.match(/^element vertex (\d+)$/m)?.[1]);
+  const chunks=Number(header.match(/^element chunk (\d+)$/m)?.[1]);
+  const offset=start+chunks*72;
+  if(!count || chunks!==Math.ceil(count/256) || start%4 || buffer.byteLength!==offset+count*16)
+    throw Error('Invalid compressed PLY');
+  const bounds=new Float32Array(buffer,start,chunks*18);
+  const packed=new Uint32Array(buffer,offset,count*4);
+  const vertices=new Float32Array(count*10), colors=new Uint8Array(vertices.buffer);
+  const positions=new Float32Array(count*3);
+  const stride=Math.max(1,Math.ceil(count/4096));
+  const sample=new Float32Array(Math.ceil(count/stride)*3);
+  const q=new Float64Array(4);
+  for(let i=0;i<count;i++) {
+    const b=(i>>>8)*18, j=i*4, k=i*10;
+    const pos=packed[j], rot=packed[j+1], scale=packed[j+2], color=packed[j+3];
+    vertices[k]=positions[i*3]=mix(bounds[b],bounds[b+3],(pos>>>21)/2047);
+    vertices[k+1]=positions[i*3+1]=mix(bounds[b+1],bounds[b+4],((pos>>>11)&1023)/1023);
+    vertices[k+2]=positions[i*3+2]=mix(bounds[b+2],bounds[b+5],(pos&2047)/2047);
+    if(i%stride===0) {
+      const p=i/stride*3;
+      sample[p]=vertices[k]; sample[p+1]=vertices[k+1]; sample[p+2]=vertices[k+2];
+    }
+    const sx=Math.exp(2*mix(bounds[b+6],bounds[b+9],(scale>>>21)/2047));
+    const sy=Math.exp(2*mix(bounds[b+7],bounds[b+10],((scale>>>11)&1023)/1023));
+    const sz=Math.exp(2*mix(bounds[b+8],bounds[b+11],(scale&2047)/2047));
+    const largest=rot>>>30;
+    let shift=20,norm=0;
+    for(let axis=0;axis<4;axis++) {
+      if(axis===largest) continue;
+      const value=(((rot>>>shift)&1023)/1023-.5)*Math.SQRT2;
+      q[axis]=value; norm+=value*value; shift-=10;
+    }
+    q[largest]=Math.sqrt(Math.max(0,1-norm));
+    const w=q[0], x=q[1], y=q[2], z=q[3];
+    const a=1-2*(y*y+z*z), d=2*(x*y+w*z), g=2*(x*z-w*y);
+    const h=2*(x*y-w*z), e=1-2*(x*x+z*z), f=2*(y*z+w*x);
+    const l=2*(x*z+w*y), m=2*(y*z-w*x), n=1-2*(x*x+y*y);
+    // Six independent elements of R diag(scale²) Rᵀ, in xx,xy,xz,yy,yz,zz order.
+    vertices[k+3]=sx*a*a+sy*h*h+sz*l*l;
+    vertices[k+4]=sx*a*d+sy*h*e+sz*l*m;
+    vertices[k+5]=sx*a*g+sy*h*f+sz*l*n;
+    vertices[k+6]=sx*d*d+sy*e*e+sz*m*m;
+    vertices[k+7]=sx*d*g+sy*e*f+sz*m*n;
+    vertices[k+8]=sx*g*g+sy*f*f+sz*n*n;
+    const c=(k+9)*4;
+    colors[c]=Math.round(255*mix(bounds[b+12],bounds[b+15],(color>>>24)/255));
+    colors[c+1]=Math.round(255*mix(bounds[b+13],bounds[b+16],((color>>>16)&255)/255));
+    colors[c+2]=Math.round(255*mix(bounds[b+14],bounds[b+17],((color>>>8)&255)/255));
+    colors[c+3]=color&255;
   }
-  if(data.orders?.length) availableOrders=data.orders;
-  if(!data.back) return;
-  const orders=availableOrders || models.map(({depths})=>new Uint32Array(depths.length));
-  availableOrders=null;
-  const [x,y,z]=data.back;
-  models.forEach(({positions,depths,bins},panel)=>{
-    bins.fill(0);
-    let min=Infinity,max=-Infinity;
-    for(let i=0,j=0;i<depths.length;i++,j+=3) {
-      const depth=Math.round(1000*(positions[j]*x+positions[j+1]*y+positions[j+2]*z));
-      depths[i]=depth;
-      min=Math.min(min,depth); max=Math.max(max,depth);
+  return {positions,vertices,sample,bins:new Uint32Array(4096),depths:new Int32Array(count)};
+}
+
+function sort(model,back,order) {
+  const {positions,bins,depths}=model, [x,y,z]=back;
+  let min=Infinity,max=-Infinity;
+  for(let i=0,j=0;i<depths.length;i++,j+=3) {
+    const depth=Math.round(1024*(positions[j]*x+positions[j+1]*y+positions[j+2]*z));
+    depths[i]=depth;
+    min=Math.min(min,depth); max=Math.max(max,depth);
+  }
+  bins.fill(0);
+  const step=(bins.length-1)/Math.max(1,max-min);
+  for(let i=0;i<depths.length;i++) {
+    depths[i]=Math.floor((depths[i]-min)*step);
+    bins[depths[i]]++;
+  }
+  let start=0;
+  for(let i=0;i<bins.length;i++) {
+    const size=bins[i]; bins[i]=start; start+=size;
+  }
+  for(let i=0;i<depths.length;i++) order[bins[depths[i]]++]=i;
+  return order;
+}
+
+self.onmessage=async ({data})=>{
+  try {
+    let panels;
+    if(data.urls) {
+      models=await Promise.all(data.urls.map(async url=>{
+        const response=await fetch(url);
+        if(!response.ok) throw Error('Model unavailable');
+        return decode(await response.arrayBuffer());
+      }));
+      panels=models.map(model=>{
+        const {vertices,sample}=model;
+        delete model.vertices; delete model.sample;
+        return {vertices,sample};
+      });
     }
-    const step=(bins.length-1)/Math.max(1,max-min);
-    for(let i=0;i<depths.length;i++) {
-      depths[i]=Math.floor((depths[i]-min)*step);
-      bins[depths[i]]++;
-    }
-    let start=0;
-    for(let i=0;i<bins.length;i++) {
-      const count=bins[i];
-      bins[i]=start;
-      start+=count;
-    }
-    for(let i=0;i<depths.length;i++) orders[panel][bins[depths[i]]++]=i;
-  });
-  self.postMessage({yaw:data.yaw,pitch:data.pitch,orders},orders.map(order=>order.buffer));
+    const orders=models.map((model,i)=>sort(model,data.back,data.orders?.[i] || new Uint32Array(model.depths.length)));
+    const transfer=orders.map(order=>order.buffer);
+    for(const panel of panels || []) transfer.push(panel.vertices.buffer,panel.sample.buffer);
+    self.postMessage({panels,orders,yaw:data.yaw,pitch:data.pitch},transfer);
+  } catch(error) { self.postMessage({error:String(error)}); }
 };

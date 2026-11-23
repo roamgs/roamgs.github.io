@@ -2,25 +2,23 @@
 const vertex = `#version 300 es
 precision highp float;
 layout(location=0) in vec3 position;
-layout(location=1) in vec3 scales;
-layout(location=2) in vec4 rgba;
-layout(location=3) in vec4 encodedRotation;
+layout(location=1) in vec3 covarianceA;
+layout(location=2) in vec3 covarianceB;
+layout(location=3) in vec4 rgba;
 uniform vec3 rightAxis, upAxis;
 uniform vec2 offset, panelSize;
 uniform float pixelsPerMeter, maxPointSize;
 out vec3 conic;
 out vec4 tint;
 out float diameter;
-vec3 rotateBack(vec3 v, vec4 q) {
-  return v + 2.0 * cross(-q.yzw, cross(-q.yzw, v) + q.x * v);
-}
 void main() {
   vec2 projected = vec2(dot(position,rightAxis), dot(position,upAxis)) - offset;
   gl_Position = vec4(2.0 * projected * pixelsPerMeter / panelSize, 0, 1);
-  vec4 q = normalize((encodedRotation * 255.0 - 128.0) / 128.0);
-  vec3 x = rotateBack(rightAxis,q) * scales * pixelsPerMeter;
-  vec3 y = rotateBack(upAxis,q) * scales * pixelsPerMeter;
-  float a = dot(x,x) + .30, b = dot(x,y), c = dot(y,y) + .30;
+  mat3 cov=mat3(covarianceA, vec3(covarianceA.y,covarianceB.xy),
+                vec3(covarianceA.z,covarianceB.yz));
+  vec3 x=cov*rightAxis, y=cov*upAxis;
+  float factor=pixelsPerMeter*pixelsPerMeter;
+  float a=dot(rightAxis,x)*factor+.30, b=dot(upAxis,x)*factor, c=dot(upAxis,y)*factor+.30;
   conic = vec3(c,-b,a) / (a*c-b*b);
   diameter = clamp(ceil(6.0 * sqrt(max(a,c))), 1.0, maxPointSize);
   gl_PointSize = diameter;
@@ -55,96 +53,124 @@ function programFor(gl) {
   return program;
 }
 
-function upload(gl, bytes) {
-  if (!bytes.byteLength || bytes.byteLength % 32) throw Error('Invalid splat data');
-  const count = bytes.byteLength / 32, values = new Float32Array(bytes);
-  const vao = gl.createVertexArray();
+function upload(gl,{vertices,sample},order) {
+  const vao=gl.createVertexArray();
   gl.bindVertexArray(vao);
   gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());
-  gl.bufferData(gl.ARRAY_BUFFER,bytes,gl.STATIC_DRAW);
-  for (const [i, offset] of [0,12,24,28].entries()) {
+  gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW);
+  for(let i=0;i<4;i++) {
     gl.enableVertexAttribArray(i);
-    gl.vertexAttribPointer(i,i<2?3:4,i<2?gl.FLOAT:gl.UNSIGNED_BYTE,i>=2,32,offset);
+    gl.vertexAttribPointer(i,i===3?4:3,i===3?gl.UNSIGNED_BYTE:gl.FLOAT,i===3,40,i*12);
   }
-  const indices = gl.createBuffer();
+  const indices=gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indices);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,count * 4,gl.DYNAMIC_DRAW);
-  // Keep only the framing sample on the UI thread before transferring the model.
-  const stride=Math.max(1,Math.floor(count/5000));
-  const sample=new Float32Array(Math.ceil(count/stride)*3);
-  for(let i=0,j=0;i<count;i+=stride,j+=3) {
-    sample[j]=values[i*8]; sample[j+1]=values[i*8+1]; sample[j+2]=values[i*8+2];
-  }
-  return {vao,indices,count,sample};
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,order,gl.DYNAMIC_DRAW);
+  return {vao,indices,sample,count:order.length};
 }
 
-export function createRenderer(canvas, buffers, centerEach, onReady, onError) {
-  const gl = canvas.getContext('webgl2',{alpha:false,antialias:false,depth:false,powerPreference:'low-power'});
-  if (!gl) throw Error('WebGL 2 unavailable');
-  const program = programFor(gl);
-  gl.useProgram(program);
-  const loc = Object.fromEntries(['rightAxis','upAxis','offset','panelSize','pixelsPerMeter','maxPointSize'].map(k=>[k,gl.getUniformLocation(program,k)]));
-  const models=buffers.map(bytes=>upload(gl,bytes));
-  gl.uniform1f(loc.maxPointSize,gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE)[1]);
-  gl.enable(gl.BLEND); gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
-  gl.clearColor(1,1,1,1);
-  const worker=new Worker(new URL('./splat-sort.js',import.meta.url),{type:'module'});
-  worker.postMessage({buffers},buffers);
-  let view, sortedYaw, sortedPitch, ready=false, pending=false;
-  worker.onerror=onError;
-  worker.onmessage=({data})=>{
-    for(let i=0;i<models.length;i++) {
-      gl.bindVertexArray(models[i].vao);
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,models[i].indices);
-      gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER,0,data.orders[i]);
-    }
-    pending=false;
-    sortedYaw=data.yaw; sortedPitch=data.pitch;
-    const first=!ready;
-    ready=true;
-    draw(...view, data.orders);
-    if(first) onReady();
-  };
+function camera(yaw,pitch) {
+  const c=Math.cos(yaw),s=Math.sin(yaw),t=Math.sin(pitch),v=Math.cos(pitch);
+  return {right:[c,s,0],up:[-s*t,c*t,v],back:[s*v,-c*v,t]};
+}
 
-  function draw(yaw,pitch,zoom,recycle) {
-    view=[yaw,pitch,zoom];
-    const dpr=Math.min(devicePixelRatio,2);
-    const w=Math.max(1,Math.round(canvas.clientWidth*dpr/2)),h=Math.max(1,Math.round(canvas.clientHeight*dpr));
-    if (canvas.width!==2*w || canvas.height!==h) { canvas.width=2*w; canvas.height=h; }
-    const c=Math.cos(yaw),s=Math.sin(yaw),t=Math.sin(pitch),v=Math.cos(pitch);
-    const right=[c,s,0], up=[-s*t,c*t,v], back=[s*v,-c*v,t];
-    if (!pending && (yaw!==sortedYaw || pitch!==sortedPitch)) {
-      pending=true;
-      const orders=recycle || [];
-      worker.postMessage({yaw,pitch,back,orders},orders.map(order=>order.buffer));
-    } else if(recycle) {
-      worker.postMessage({orders:recycle},recycle.map(order=>order.buffer));
-    }
-    if (!ready) return;
-    const bounds = models.map(({sample}) => {
-      let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
-      for(let j=0;j<sample.length;j+=3) {
-        const x=sample[j]*c+sample[j+1]*s;
-        const y=sample[j]*up[0]+sample[j+1]*up[1]+sample[j+2]*v;
-        x0=Math.min(x0,x); x1=Math.max(x1,x); y0=Math.min(y0,y); y1=Math.max(y1,y);
+function projectedBounds(sample,right,up) {
+  let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
+  for(let j=0;j<sample.length;j+=3) {
+    const x=sample[j]*right[0]+sample[j+1]*right[1];
+    const y=sample[j]*up[0]+sample[j+1]*up[1]+sample[j+2]*up[2];
+    x0=Math.min(x0,x); x1=Math.max(x1,x); y0=Math.min(y0,y); y1=Math.max(y1,y);
+  }
+  return {x0,x1,y0,y1};
+}
+
+export function createRenderer(canvas,urls,centerEach,onReady,onError) {
+  const worker=new Worker(new URL('./splat-sort.js?v=dense-ply-1',import.meta.url),{type:'module'});
+  let gl, loc, models, orders, frame=0, sortedYaw=.93, sortedPitch=.64;
+  let yaw=sortedYaw, pitch=sortedPitch, zoom=1, visible=false, sorting=true, disposed=false;
+  let geometry, geometryYaw, geometryPitch, settleTimer, interacting=false;
+  worker.onerror=onError;
+  worker.postMessage({urls,yaw,pitch,back:camera(yaw,pitch).back});
+  function initialize(panels,indices) {
+    gl=canvas.getContext('webgl2',{alpha:false,antialias:false,depth:false,stencil:false,powerPreference:'high-performance'});
+    if(!gl) throw Error('WebGL 2 unavailable');
+    const program=programFor(gl);
+    gl.useProgram(program);
+    loc=Object.fromEntries(['rightAxis','upAxis','offset','panelSize','pixelsPerMeter','maxPointSize'].map(k=>[k,gl.getUniformLocation(program,k)]));
+    gl.uniform1f(loc.maxPointSize,gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE)[1]);
+    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
+    gl.clearColor(1,1,1,1);
+    models=panels.map((panel,i)=>upload(gl,panel,indices[i]));
+  }
+  worker.onmessage=({data})=>{
+    if(disposed) return;
+    if(data.error) {onError(Error(data.error)); return;}
+    try {
+      const first=!!data.panels;
+      if(first) initialize(data.panels,data.orders);
+      else {
+        for(const [i,model] of models.entries()) {
+          gl.bindVertexArray(model.vao);
+          gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER,0,data.orders[i]);
+        }
       }
-      return {x0,x1,y0,y1};
-    });
-    const x0=Math.min(...bounds.map(b=>b.x0)), x1=Math.max(...bounds.map(b=>b.x1));
-    const y0=Math.min(...bounds.map(b=>b.y0)), y1=Math.max(...bounds.map(b=>b.y1));
+      orders=data.orders; sorting=false;
+      sortedYaw=data.yaw; sortedPitch=data.pitch;
+      if(first) onReady();
+      schedule();
+    } catch(error) {onError(error);}
+  };
+  function schedule() {
+    if(visible && models && !frame) frame=requestAnimationFrame(render);
+  }
+  function render() {
+    frame=0;
+    const {right,up,back}=camera(yaw,pitch);
+    const delta=Math.abs(yaw-sortedYaw)+Math.abs(pitch-sortedPitch);
+    if(!sorting && delta>(interacting?.045:0)) {
+      sorting=true;
+      worker.postMessage({yaw,pitch,back,orders},orders.map(order=>order.buffer));
+      orders=null;
+    }
+    // Lower pixel fill cost during motion while retaining every Gaussian.
+    const dpr=Math.min(devicePixelRatio,interacting?1:1.5);
+    const w=Math.max(1,Math.round(canvas.clientWidth*dpr/2)), h=Math.max(1,Math.round(canvas.clientHeight*dpr));
+    if(canvas.width!==2*w || canvas.height!==h) { canvas.width=2*w; canvas.height=h; }
+    if(!geometry || geometryYaw!==yaw || geometryPitch!==pitch) {
+      geometry=models.map(model=>projectedBounds(model.sample,right,up));
+      geometryYaw=yaw; geometryPitch=pitch;
+    }
+    const [a,b]=geometry;
+    const x0=Math.min(a.x0,b.x0),x1=Math.max(a.x1,b.x1),y0=Math.min(a.y0,b.y0),y1=Math.max(a.y1,b.y1);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.uniform3fv(loc.rightAxis,right); gl.uniform3fv(loc.upAxis,up);
     gl.uniform2f(loc.panelSize,w,h);
-    gl.uniform1f(loc.pixelsPerMeter,.91*zoom*Math.min(w/(x1-x0),h/(y1-y0)));
-    for (const [i,model] of models.entries()) {
-      const box = centerEach ? bounds[i] : {x0,x1,y0,y1};
+    gl.uniform1f(loc.pixelsPerMeter,.91*zoom*Math.min(w/Math.max(.01,x1-x0),h/Math.max(.01,y1-y0)));
+    gl.enable(gl.SCISSOR_TEST);
+    for(const [i,model] of models.entries()) {
+      const box=centerEach?geometry[i]:{x0,x1,y0,y1};
       gl.uniform2f(loc.offset,(box.x0+box.x1)/2,(box.y0+box.y1)/2);
-      gl.viewport(i*w,0,w,h);
-      gl.enable(gl.SCISSOR_TEST); gl.scissor(i*w,0,w,h);
+      gl.viewport(i*w,0,w,h); gl.scissor(i*w,0,w,h);
       gl.bindVertexArray(model.vao);
       gl.drawElements(gl.POINTS,model.count,gl.UNSIGNED_INT,0);
     }
     gl.disable(gl.SCISSOR_TEST);
   }
-  return {draw, dispose:()=>worker.terminate()};
+  return {
+    draw(y,p,z,moving=false) {
+      yaw=y; pitch=p; zoom=z; visible=true;
+      if(moving) {
+        interacting=true; clearTimeout(settleTimer);
+        settleTimer=setTimeout(()=>{interacting=false; schedule();},140);
+      }
+      schedule();
+    },
+    hide() {
+      visible=false; interacting=false;
+      cancelAnimationFrame(frame); frame=0; clearTimeout(settleTimer);
+    },
+    dispose() {
+      disposed=true; cancelAnimationFrame(frame); clearTimeout(settleTimer); worker.terminate();
+      gl?.getExtension('WEBGL_lose_context')?.loseContext();
+    }
+  };
 }
