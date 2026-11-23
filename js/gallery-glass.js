@@ -2,13 +2,17 @@
 
 function addReplayControl(figure) {
   const video = figure.querySelector('video');
-  const viewport = document.createElement('div');
-  viewport.className = 'viewport';
-  const toggle = document.createElement('button');
-  toggle.className = 'film-surface';
-  toggle.type = 'button';
-  figure.prepend(viewport);
-  viewport.append(video, toggle);
+  let toggle = figure.querySelector('.film-surface');
+  if (!toggle) {
+    const viewport = document.createElement('div');
+    viewport.className = 'viewport';
+    toggle = document.createElement('button');
+    toggle.className = 'film-surface';
+    toggle.type = 'button';
+    figure.prepend(viewport);
+    viewport.append(video, toggle);
+  }
+  toggle.hidden = false;
   video.controls = false;
 
   function playbackState() {

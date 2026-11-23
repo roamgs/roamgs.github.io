@@ -1,7 +1,18 @@
-import {createRenderer} from './splat-renderer.js?v=compact-orbit-1';
-
 const clamp = (n,min,max) => Math.max(min,Math.min(max,n));
 let closeActive;
+let rendererModule, rendererAttempt=0;
+function loadRenderer() {
+  if(!rendererModule) {
+    const url=new URL('./splat-renderer.js?v=compact-orbit-1',import.meta.url);
+    if(rendererAttempt) url.searchParams.set('retry',String(rendererAttempt));
+    rendererAttempt++;
+    rendererModule=import(url.href).catch(error=>{
+      rendererModule=undefined;
+      throw error;
+    });
+  }
+  return rendererModule;
+}
 const cachedScenes=new Map();
 const compactModels=new Set([
   '102344250-roam','106365897_174225972-roam',
@@ -16,17 +27,26 @@ const nearScene=new IntersectionObserver(entries=>{
 
 for (const figure of document.querySelectorAll('.film')) {
   const viewport=figure.querySelector('.viewport');
+  if(!viewport || figure.dataset.explorer==='video-only') continue;
   const video=viewport.querySelector('video'), surface=viewport.querySelector('.film-surface');
-  if (figure.dataset.explorer === 'video-only') continue;
-  const mode=document.createElement('button');
-  mode.type='button';
-  mode.className='scene-mode';
-  mode.textContent='Explore 3D';
-  mode.setAttribute('aria-pressed','false');
-  const status=document.createElement('span');
-  status.className='scene-status';
-  status.setAttribute('role','status');
-  viewport.append(mode,status);
+  if(!video || !surface) continue;
+  let mode=viewport.querySelector('.scene-mode');
+  if(mode?.hasAttribute('data-explorer-bound')) continue;
+  if(!mode) {
+    mode=document.createElement('button');
+    mode.type='button';
+    mode.className='scene-mode';
+    mode.textContent='Explore 3D';
+    mode.setAttribute('aria-pressed','false');
+    viewport.append(mode);
+  }
+  let status=viewport.querySelector('.scene-status');
+  if(!status) {
+    status=document.createElement('span');
+    status.className='scene-status';
+    status.setAttribute('role','status');
+    viewport.append(status);
+  }
 
   let canvas,renderer,pointer,suppressClick,expiry,download,warmTimer;
   let ready=false, yaw=.93, pitch=.64, zoom=1;
@@ -54,6 +74,7 @@ for (const figure of document.querySelectorAll('.film')) {
     mode.setAttribute('aria-pressed','false');
     status.textContent='';
     closeActive=null;
+    surface.hidden=video.controls;
     surface.setAttribute('aria-label',(video.paused?'Play ':'Pause ')+figure.dataset.scene+' comparison');
     syncPlayback();
     if(!ready && !keepPreparing) release();
@@ -72,7 +93,8 @@ for (const figure of document.querySelectorAll('.film')) {
     error.preventDefault?.();
     if(figure.dataset.exploring) {
       leave();
-      status.textContent='3D unavailable · Showing replay';
+      mode.textContent='Retry 3D';
+      status.textContent='3D unavailable';
     }
     release();
   }
@@ -107,11 +129,12 @@ for (const figure of document.querySelectorAll('.film')) {
     download=new AbortController();
     const {signal}=download;
     try {
-      const blobs=await Promise.all(urls.map(async url=>{
+      const models=Promise.all(urls.map(async url=>{
         const response=await fetch(url,{signal});
         if(!response.ok) throw Error('Model unavailable');
         return response.blob();
       }));
+      const [{createRenderer},blobs]=await Promise.all([loadRenderer(),models]);
       if(canvas!==node) return;
       download=null;
       renderer=createRenderer(canvas,blobs,figure.hasAttribute('data-center-each'),()=>{
@@ -128,6 +151,7 @@ for (const figure of document.querySelectorAll('.film')) {
     clearTimeout(expiry);
     yaw=.93; pitch=.64; zoom=1;
     figure.dataset.exploring=entry;
+    surface.hidden=false;
     syncPlayback();
     mode.textContent='Back to video';
     mode.setAttribute('aria-pressed','true');
@@ -207,4 +231,5 @@ for (const figure of document.querySelectorAll('.film')) {
     else return;
     e.preventDefault();
   });
+  mode.dataset.explorerBound='';
 }
