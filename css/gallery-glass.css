@@ -243,9 +243,9 @@
 }
 .cinema {grid-template-columns:minmax(0,1fr)}
 #project {scroll-margin-top:50svh;white-space:nowrap}
+#project > span {padding-inline-end:.12em;text-align:start}
 [data-theme="light"] #project {filter:drop-shadow(0 2px 1px #fff9) drop-shadow(0 3px 10px #8547aa24)}
 [data-theme="dark"] #project > span {
-  padding-inline-end:.075em;
   background:linear-gradient(165deg,#fff6ff75,transparent 38%,#8350ba1a 57%,transparent 75%),
     linear-gradient(103deg,#bda4ff 3%,#e4cbff 30%,#cba8f6 45%,#f6b3dc 73%,#ffb3c0 96%);
   background-clip:text;

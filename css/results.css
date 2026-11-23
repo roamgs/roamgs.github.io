@@ -19,7 +19,7 @@
   background:white;color:#151214;font:normal clamp(.9rem,1.25vw,1.08rem)/1.3 "Times New Roman",Times,serif;
   font-variant-numeric:lining-nums tabular-nums;white-space:nowrap;
 }
-.benchmark th,.benchmark td {padding:.29em .24em;text-align:right;font-weight:400}
+.benchmark th,.benchmark td {padding:.29em .24em;text-align:center;font-weight:400}
 .benchmark thead tr:first-child th {text-align:center;border-bottom:1px solid #666}
 .benchmark thead tr:last-child th {border-bottom:1px solid #353135}
 .benchmark thead th:nth-child(2),.benchmark th[scope=row] {text-align:left}
@@ -100,7 +100,7 @@
 
 .replica-heading {margin-top:2rem}
 .benchmark.replica {min-width:38rem}
-.benchmark.replica thead th {text-align:right;border-bottom:1px solid #353135}
+.benchmark.replica thead th {text-align:center;border-bottom:1px solid #353135}
 .benchmark.replica thead th:first-child {text-align:left}
 @media(max-width:600px) {
   .benchmark.replica thead th:nth-child(2) {position:static;box-shadow:none}

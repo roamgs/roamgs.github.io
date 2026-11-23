@@ -246,8 +246,8 @@ summary:hover {color: var(--ink)}
 }
 
 </style>
-<link rel="stylesheet" href="css/gallery-glass.css?v=gallery-white">
-<link rel="stylesheet" href="css/results.css?v=replica">
+<link rel="stylesheet" href="css/gallery-glass.css?v=wordmark-edge">
+<link rel="stylesheet" href="css/results.css?v=stacked-centered">
 <link rel="stylesheet" href="css/theme.css?v=frame-cutout">
 </head>
 <body>
@@ -562,12 +562,6 @@ if (sceneAnchor && document.getElementById(sceneAnchor[1])) {
 </section>
 <section id="results" class="results" aria-labelledby="results-title">
 <h2 id="results-title">Results</h2>
-<div class="result-tabs" aria-label="Results views" hidden>
-  <button type="button" id="tab-benchmark" aria-controls="result-benchmark">Benchmark</button>
-  <button type="button" id="tab-progression" aria-controls="result-progression">Progression</button>
-  <button type="button" id="tab-geometry" aria-controls="result-geometry">Geometry</button>
-  <button type="button" id="tab-views" aria-controls="result-views">Novel views</button>
-</div>
 <div class="result-panel" id="result-benchmark">
   <div class="benchmark-heading"><h3>Multi-room reconstruction</h3></div>
 
@@ -660,7 +654,6 @@ if (sceneAnchor && document.getElementById(sceneAnchor[1])) {
 <footer class="dataset-credits">Scene visualizations are derived from the <a href="https://huggingface.co/datasets/hssd/hssd-hab">Habitat Synthetic Scenes Dataset</a> (<a href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a>) and the <a href="https://github.com/matterport/habitat-matterport-3dresearch">Habitat-Matterport 3D Research Dataset</a> (<a href="https://matterport.com/legal/matterport-end-user-license-agreement-academic-use-model-data">Matterport academic use terms</a>).</footer>
 <script type="module" src="js/hero-cutout.js"></script>
 <script src="js/gallery-glass.js?v=static-controls-1"></script>
-<script src="js/results.js?v=appendix-normals"></script>
 <script type="module" src="js/paper-checkpoints.js"></script>
 <script type="module" src="js/figure-detail.js"></script>
 <script src="js/contents.js?v=scroll-play"></script>
