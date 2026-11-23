@@ -284,13 +284,13 @@ summary:hover {color: var(--ink)}
   <div class="films">
    <div class="film-slot">
     <figure data-scene="102344250" class="film" id="scene-102344250">
-     <video controls muted loop playsinline preload="none" data-poster="media/102344250-replay.jpg?v=fast" src="media/102344250-replay.mp4?v=scroll30" aria-label="102344250 reconstruction comparison"></video>
+     <video controls muted loop playsinline preload="auto" poster="media/102344250-replay.jpg?v=fast" src="media/102344250-replay.mp4?v=scroll30" aria-label="102344250 reconstruction comparison"></video>
      <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
     </figure>
    </div>
    <div class="film-slot">
     <figure data-scene="106365897_174225972" class="film" id="scene-106365897_174225972">
-     <video controls muted loop playsinline preload="none" data-poster="media/106365897_174225972-replay.jpg?v=fast" src="media/106365897_174225972-replay.mp4?v=scroll30" aria-label="106365897_174225972 reconstruction comparison"></video>
+     <video controls muted loop playsinline preload="auto" poster="media/106365897_174225972-replay.jpg?v=fast" src="media/106365897_174225972-replay.mp4?v=scroll30" aria-label="106365897_174225972 reconstruction comparison"></video>
      <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
     </figure>
    </div>
@@ -299,25 +299,25 @@ summary:hover {color: var(--ink)}
   <div class="films">
    <div class="film-slot">
     <figure data-scene="00848-ziup5kvtCCR" class="film" id="scene-00848-ziup5kvtCCR">
-     <video controls muted loop playsinline preload="none" data-poster="media/00848-ziup5kvtCCR-replay.jpg?v=fast" src="media/00848-ziup5kvtCCR-replay.mp4?v=scroll30" aria-label="00848-ziup5kvtCCR reconstruction comparison"></video>
+     <video controls muted loop playsinline preload="auto" poster="media/00848-ziup5kvtCCR-replay.jpg?v=fast" src="media/00848-ziup5kvtCCR-replay.mp4?v=scroll30" aria-label="00848-ziup5kvtCCR reconstruction comparison"></video>
      <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
     </figure>
    </div>
    <div class="film-slot">
     <figure data-center-each data-scene="00813-svBbv1Pavdk" class="film" id="scene-00813-svBbv1Pavdk">
-     <video controls muted loop playsinline preload="none" data-poster="media/00813-svBbv1Pavdk-replay.jpg?v=fast" src="media/00813-svBbv1Pavdk-replay.mp4?v=scroll30" aria-label="00813-svBbv1Pavdk reconstruction comparison"></video>
+     <video controls muted loop playsinline preload="auto" poster="media/00813-svBbv1Pavdk-replay.jpg?v=fast" src="media/00813-svBbv1Pavdk-replay.mp4?v=scroll30" aria-label="00813-svBbv1Pavdk reconstruction comparison"></video>
      <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
     </figure>
    </div>
    <div class="film-slot">
     <figure data-scene="00860-RJaJt8UjXav" class="film" id="scene-00860-RJaJt8UjXav">
-     <video controls muted loop playsinline preload="none" data-poster="media/00860-RJaJt8UjXav-replay.jpg?v=fast" src="media/00860-RJaJt8UjXav-replay.mp4?v=scroll30" aria-label="00860-RJaJt8UjXav reconstruction comparison"></video>
+     <video controls muted loop playsinline preload="auto" poster="media/00860-RJaJt8UjXav-replay.jpg?v=fast" src="media/00860-RJaJt8UjXav-replay.mp4?v=scroll30" aria-label="00860-RJaJt8UjXav reconstruction comparison"></video>
      <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
     </figure>
    </div>
    <div class="film-slot">
     <figure data-center-each data-scene="00879-7Ukhou1GxYi" class="film" id="scene-00879-7Ukhou1GxYi">
-     <video controls muted loop playsinline preload="none" data-poster="media/00879-7Ukhou1GxYi-replay.jpg?v=fast" src="media/00879-7Ukhou1GxYi-replay.mp4?v=scroll30" aria-label="00879-7Ukhou1GxYi reconstruction comparison"></video>
+     <video controls muted loop playsinline preload="auto" poster="media/00879-7Ukhou1GxYi-replay.jpg?v=fast" src="media/00879-7Ukhou1GxYi-replay.mp4?v=scroll30" aria-label="00879-7Ukhou1GxYi reconstruction comparison"></video>
      <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
     </figure>
    </div>
@@ -445,7 +445,7 @@ summary:hover {color: var(--ink)}
 </main>
 <footer class="dataset-credits">Scene visualizations are derived from the <a href="https://huggingface.co/datasets/hssd/hssd-hab">Habitat Synthetic Scenes Dataset</a> (<a href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a>) and the <a href="https://github.com/matterport/habitat-matterport-3dresearch">Habitat-Matterport 3D Research Dataset</a> (<a href="https://matterport.com/legal/matterport-end-user-license-agreement-academic-use-model-data">Matterport academic use terms</a>).</footer>
 <script type="module" src="js/hero-cutout.js"></script>
-<script src="js/gallery-glass.js?v=scroll-play"></script>
+<script src="js/gallery-glass.js?v=page-play"></script>
 <script src="js/results.js?v=appendix-normals"></script>
 <script type="module" src="js/paper-checkpoints.js"></script>
 <script type="module" src="js/figure-detail.js"></script>
@@ -453,56 +453,44 @@ summary:hover {color: var(--ink)}
 <script>
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
 const clips=[...document.querySelectorAll('video')];
-const visibleClips=new Set();
-
-const playbackSlots=new Set();
-const smallScreen=matchMedia('(max-width:680px)');
-let preferredClip;
+const deniedPlayback=new Set();
+const interruptedPlayback=new Map();
+function rememberInterruption(clip) {
+  if(!interruptedPlayback.has(clip)) {
+    interruptedPlayback.set(clip,{position:clip.currentTime,at:performance.now()});
+  }
+}
+function alignAfterInterruption(clip) {
+  const saved=interruptedPlayback.get(clip);
+  if(!saved || !Number.isFinite(clip.duration) || !clip.seekable.length) return;
+  const phase=(saved.position+(performance.now()-saved.at)/1000)%clip.duration;
+  interruptedPlayback.delete(clip);
+  if(Math.abs(phase-clip.currentTime)>.35 && phase>=clip.seekable.start(0) &&
+     phase<=clip.seekable.end(clip.seekable.length-1)) clip.currentTime=phase;
+}
 function shouldPlay(clip) {
-  return !document.hidden && playbackSlots.has(clip) && !reducedMotion.matches &&
-    !clip.hasAttribute('data-user-paused') && !document.querySelector('.film[data-orbit-ready]');
+  return !document.hidden && !clip.closest('.film[data-orbit-ready]') &&
+    !clip.hasAttribute('data-user-paused') &&
+    (!reducedMotion.matches || clip.hasAttribute('data-manual-play'));
+}
+function startPlayback(clip) {
+  if(!shouldPlay(clip) || !clip.paused) return;
+  clip.play().then(()=>deniedPlayback.delete(clip)).catch(error=>{
+    if(error.name==='NotAllowedError' && shouldPlay(clip)) {
+      deniedPlayback.add(clip);
+      rememberInterruption(clip);
+    }
+  });
 }
 function syncPlayback() {
-  const candidates=[...visibleClips].filter(clip=>!clip.hasAttribute('data-user-paused'));
-  playbackSlots.clear();
-  if(smallScreen.matches && candidates.length) {
-    const midpoint=innerHeight/2;
-    let selected,closest=Infinity;
-    for(const clip of candidates) {
-      const rect=clip.getBoundingClientRect();
-      const distance=Math.abs(rect.top+rect.height/2-midpoint);
-      if(distance<closest) {selected=clip; closest=distance;}
-    }
-    playbackSlots.add(candidates.includes(preferredClip)?preferredClip:selected);
-  } else {
-    for(const clip of candidates) playbackSlots.add(clip);
-  }
-  const suspended=document.hidden || !!document.querySelector('.film[data-orbit-ready]');
   for(const clip of clips) {
-    if(suspended || !playbackSlots.has(clip)) {
+    if(shouldPlay(clip)) startPlayback(clip);
+    else {
+      interruptedPlayback.delete(clip);
       if(!clip.paused) clip.pause();
-    } else if(!reducedMotion.matches && clip.paused) {
-      clip.play().catch(()=>{});
     }
   }
 }
-const bufferObserver=new IntersectionObserver(entries=>{
-  for(const {target,isIntersecting} of entries) {
-    if(!isIntersecting) continue;
-    target.poster=target.dataset.poster;
-    if(!navigator.connection?.saveData && !reducedMotion.matches) target.preload='auto';
-    bufferObserver.unobserve(target);
-  }
-},{rootMargin:'280px 0px'});
-for(const clip of clips) if(clip.dataset.poster) bufferObserver.observe(clip);
-const observer=new IntersectionObserver(entries=>{
-  for(const {target,intersectionRatio,isIntersecting} of entries) {
-    if(isIntersecting && intersectionRatio>=.45) visibleClips.add(target);
-    else if(!isIntersecting || intersectionRatio<=.12) visibleClips.delete(target);
-  }
-  if(!visibleClips.has(preferredClip)) preferredClip=null;
-  syncPlayback();
-},{threshold:[0,.12,.45,.75,1]});
 // Some networks fail a video byte-range request even though the complete MP4 is readable.
 async function recoverReplay(clip) {
   if(clip.hasAttribute('data-retried') || !clip.error || clip.error.code===1) return;
@@ -513,25 +501,39 @@ async function recoverReplay(clip) {
     const blob=await response.blob();
     clip.src=URL.createObjectURL(blob);
     clip.load();
-    if(shouldPlay(clip) || (reducedMotion.matches && preferredClip===clip && !document.hidden &&
-       !document.querySelector('.film[data-orbit-ready]'))) clip.play().catch(()=>{});
+    startPlayback(clip);
   } catch { /* Keep the poster and the manual replay control available. */ }
 }
+// The page starts every clip immediately. Only retry if the browser suspended one.
+const interruptedObserver=new IntersectionObserver(entries=>{
+  for(const {target,isIntersecting} of entries) {
+    if(isIntersecting && target.paused && shouldPlay(target)) startPlayback(target);
+  }
+});
 for(const clip of clips){
   clip.muted = true;
+  interruptedObserver.observe(clip);
+  clip.addEventListener('playing',()=>alignAfterInterruption(clip));
+  clip.addEventListener('pause',()=>{
+    if(shouldPlay(clip) && clip.paused) rememberInterruption(clip);
+  });
   clip.addEventListener('error',()=>recoverReplay(clip));
-  observer.observe(clip);
 }
+document.addEventListener('visibilitychange',syncPlayback);
 document.addEventListener('replay-choice',event=>{
-  preferredClip=event.target.hasAttribute('data-user-paused')?null:event.target;
+  interruptedPlayback.delete(event.target);
+  startPlayback(event.target);
+});
+function retryDeniedPlayback() {
+  for(const clip of deniedPlayback) startPlayback(clip);
+}
+document.addEventListener('click',retryDeniedPlayback);
+document.addEventListener('keydown',retryDeniedPlayback);
+reducedMotion.addEventListener('change',()=>{
+  for(const clip of clips) clip.removeAttribute('data-manual-play');
   syncPlayback();
 });
-document.addEventListener('visibilitychange',syncPlayback);
-smallScreen.addEventListener('change',syncPlayback);
-reducedMotion.addEventListener('change',()=>{
-  if(reducedMotion.matches)clips.forEach(clip=>clip.pause());
-  else syncPlayback();
-});
+syncPlayback();
 </script>
 <script>
 const room = document.getElementById('cinema-film');
@@ -564,6 +566,6 @@ for (const replay of [room, matchingReplay]) {
   replay.addEventListener('playing', alignReplay);
 }
 </script>
-<script type="module" src="js/scene-explorer.js?v=scroll-play"></script>
+<script type="module" src="js/scene-explorer.js?v=retina-warm"></script>
 </body>
 </html>

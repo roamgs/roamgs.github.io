@@ -83,13 +83,13 @@ function projectedBounds(sample,right,up) {
   return {x0,x1,y0,y1};
 }
 
-export function createRenderer(canvas,urls,centerEach,onReady,onError) {
-  const worker=new Worker(new URL('./splat-sort.js?v=dense-ply-2',import.meta.url),{type:'module'});
+export function createRenderer(canvas,blobs,centerEach,onReady,onError) {
+  const worker=new Worker(new URL('./splat-sort.js?v=blob-ply',import.meta.url),{type:'module'});
   let gl, loc, models, orders, frame=0, sortedYaw=.93, sortedPitch=.64;
   let yaw=sortedYaw, pitch=sortedPitch, zoom=1, visible=false, sorting=true, disposed=false;
   let geometry, geometryYaw, geometryPitch, settleTimer, interacting=false;
   worker.onerror=onError;
-  worker.postMessage({urls,yaw,pitch,back:camera(yaw,pitch).back});
+  worker.postMessage({blobs,yaw,pitch,back:camera(yaw,pitch).back});
   function initialize(panels,indices) {
     gl=canvas.getContext('webgl2',{alpha:false,antialias:false,depth:false,stencil:false,powerPreference:'high-performance'});
     if(!gl) throw Error('WebGL 2 unavailable');
@@ -131,8 +131,8 @@ export function createRenderer(canvas,urls,centerEach,onReady,onError) {
       worker.postMessage({yaw,pitch,back,orders},orders.map(order=>order.buffer));
       orders=null;
     }
-    // Lower pixel fill cost during motion while retaining every Gaussian.
-    const dpr=Math.min(devicePixelRatio,interacting?1:1.5);
+    // Keep the backing store stable across pointer events on high-density displays.
+    const dpr=Math.min(devicePixelRatio,2);
     const w=Math.max(1,Math.round(canvas.clientWidth*dpr/2)), h=Math.max(1,Math.round(canvas.clientHeight*dpr));
     if(canvas.width!==2*w || canvas.height!==h) { canvas.width=2*w; canvas.height=h; }
     if(!geometry || geometryYaw!==yaw || geometryPitch!==pitch) {

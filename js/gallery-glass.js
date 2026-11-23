@@ -18,10 +18,12 @@ function addReplayControl(figure) {
   toggle.addEventListener('click', () => {
     if (video.paused) {
       delete video.dataset.userPaused;
+      video.dataset.manualPlay='';
       video.dispatchEvent(new Event('replay-choice',{bubbles:true}));
-      video.play().catch(playbackState);
+      playbackState();
     } else {
       video.dataset.userPaused = '';
+      delete video.dataset.manualPlay;
       video.pause();
       video.dispatchEvent(new Event('replay-choice',{bubbles:true}));
     }

@@ -1,8 +1,22 @@
-import {createRenderer} from './splat-renderer.js?v=dense-ply-2';
+import {createRenderer} from './splat-renderer.js?v=retina-warm';
 
 const clamp = (n,min,max) => Math.max(min,Math.min(max,n));
 let closeActive;
 const cachedScenes=new Map();
+// Keep compact PLY blobs for this page. Decode and allocate GPU buffers for at most
+// the first warm scene and the scenes the visitor actually selects.
+const modelFiles=new Map();
+const downloads=[];
+function modelFile(url,priority) {
+  if(!modelFiles.has(url)) {
+    const request=fetch(url,{priority}).then(response=>{
+      if(!response.ok) throw Error('Model unavailable');
+      return response.blob();
+    }).catch(error=>{modelFiles.delete(url); throw error;});
+    modelFiles.set(url,request);
+  }
+  return modelFiles.get(url);
+}
 const nearScene=new IntersectionObserver(entries=>{
   for(const {target,isIntersecting} of entries) {
     if(!isIntersecting && target.dataset.exploring) closeActive?.();
@@ -23,7 +37,7 @@ for (const figure of document.querySelectorAll('.film')) {
   status.setAttribute('role','status');
   viewport.append(mode,status);
 
-  let canvas,renderer,pointer,suppressClick,wasPlaying,expiry;
+  let canvas,renderer,pointer,suppressClick,expiry;
   let ready=false, yaw=.93, pitch=.64, zoom=1;
   const resize=new ResizeObserver(()=>redraw());
   function redraw(moving=false) {
@@ -38,12 +52,11 @@ for (const figure of document.querySelectorAll('.film')) {
     clearTimeout(expiry);
     expiry=setTimeout(()=>{if(!figure.dataset.exploring) release();},60000);
   }
-  function leave({resume=wasPlaying}={}) {
+  function leave() {
     if(!figure.dataset.exploring) return;
     resize.disconnect();
     renderer?.hide();
     if(canvas) canvas.style.visibility='hidden';
-    if(resume && visibleClips.has(video)) preferredClip=video;
     delete figure.dataset.exploring;
     delete figure.dataset.orbitReady;
     mode.textContent='Explore 3D';
@@ -52,7 +65,6 @@ for (const figure of document.querySelectorAll('.film')) {
     closeActive=null;
     surface.setAttribute('aria-label',(video.paused?'Play ':'Pause ')+figure.dataset.scene+' comparison');
     syncPlayback();
-    if(resume && reducedMotion.matches && !document.hidden && visibleClips.has(video) && !video.hasAttribute('data-user-paused')) video.play().catch(()=>{});
     expireLater();
   }
   function release() {
@@ -78,8 +90,10 @@ for (const figure of document.querySelectorAll('.film')) {
     canvas.style.visibility='visible';
     status.textContent=figure.dataset.exploring==='drag' ? 'Release drag to play' : 'Drag to orbit';
   }
-  function prepare() {
-    if(renderer) return;
+  const urls=['activegs','roam'].map(method=>
+    new URL('models/dense/'+figure.dataset.scene+'-'+method+'.ply',document.baseURI).href);
+  async function prepare() {
+    if(canvas) return;
     // Reserve GPU memory for the active comparison. Reuse a second completed pair on desktop.
     const cap=matchMedia('(pointer:coarse)').matches?1:2;
     for(const [card,cache] of cachedScenes) {
@@ -87,27 +101,27 @@ for (const figure of document.querySelectorAll('.film')) {
       if(!cache.ready() || cachedScenes.size>=cap) cache.release();
     }
     cachedScenes.set(figure,{release,ready:()=>ready});
-    const urls=['activegs','roam'].map(method=>
-      new URL('models/dense/'+figure.dataset.scene+'-'+method+'.ply',document.baseURI).href);
     canvas=document.createElement('canvas');
     canvas.className='orbit-view'; canvas.style.visibility='hidden';
     canvas.setAttribute('aria-hidden','true');
     viewport.insertBefore(canvas,surface);
     canvas.addEventListener('webglcontextlost',failed);
+    const node=canvas;
     try {
-      renderer=createRenderer(canvas,urls,figure.hasAttribute('data-center-each'),()=>{
+      const blobs=await Promise.all(urls.map(url=>modelFile(url,'high')));
+      if(canvas!==node) return;
+      renderer=createRenderer(canvas,blobs,figure.hasAttribute('data-center-each'),()=>{
         ready=true;
         if(figure.dataset.exploring) showScene();
         else expireLater();
       },failed);
-    } catch(error) {failed(error);}
+    } catch(error) {if(canvas===node) failed(error);}
   }
   function explore(entry) {
     closeActive?.();
     closeActive=leave;
     clearTimeout(expiry);
     yaw=.93; pitch=.64; zoom=1;
-    wasPlaying=!video.paused;
     figure.dataset.exploring=entry;
     mode.textContent='Back to video';
     mode.setAttribute('aria-pressed','true');
@@ -121,7 +135,12 @@ for (const figure of document.querySelectorAll('.film')) {
       prepare();
     }
   }
+  downloads.push({urls,prepare});
   nearScene.observe(figure);
+  mode.addEventListener('pointerenter',event=>{
+    if(event.pointerType==='mouse' && !closeActive && !navigator.connection?.saveData) prepare();
+  });
+  mode.addEventListener('focus',()=>{if(!closeActive && !navigator.connection?.saveData) prepare();});
   mode.addEventListener('click',()=>{
     if (figure.dataset.exploring) leave();
     else { explore('button'); surface.focus({preventScroll:true}); }
@@ -155,7 +174,7 @@ for (const figure of document.querySelectorAll('.film')) {
     pointer = null;
     if (dragged) redraw();
     if (dragged && figure.dataset.exploring === 'drag') {
-      leave({resume: event.type === 'pointerup' || wasPlaying});
+      leave();
     }
   }
   surface.addEventListener('pointerup', finishDrag);
@@ -182,3 +201,26 @@ for (const figure of document.querySelectorAll('.film')) {
     e.preventDefault();
   });
 }
+
+async function preloadScenes() {
+  if(navigator.connection?.saveData) return;
+  for(const [index,scene] of downloads.entries()) {
+    for(const url of scene.urls) {
+      while(document.hidden || closeActive || clips.some(clip=>!clip.paused &&
+        clip.readyState<3 && !clip.error && clip.getBoundingClientRect().bottom>0 &&
+        clip.getBoundingClientRect().top<innerHeight)) {
+        // A requested scene can always bypass this background queue.
+        await new Promise(resolve=>setTimeout(resolve,600));
+      }
+      try { await modelFile(url,'low'); }
+      catch { /* An explicit visit retries any failed background transfer. */ }
+    }
+    if(index===0 && !document.hidden && !cachedScenes.size && scene.urls.every(url=>modelFiles.has(url))) {
+      const warm=()=>{if(!cachedScenes.size && !document.hidden) scene.prepare();};
+      if(window.requestIdleCallback) requestIdleCallback(warm,{timeout:1200});
+      else setTimeout(warm,120);
+    }
+  }
+}
+// The media elements request playback first. Model downloads run one file at a time.
+setTimeout(preloadScenes,300);

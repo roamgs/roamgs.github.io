@@ -85,12 +85,8 @@ function sort(model,back,order) {
 self.onmessage=async ({data})=>{
   try {
     let panels;
-    if(data.urls) {
-      models=await Promise.all(data.urls.map(async url=>{
-        const response=await fetch(url);
-        if(!response.ok) throw Error('Model unavailable');
-        return decode(await response.arrayBuffer());
-      }));
+    if(data.blobs) {
+      models=await Promise.all(data.blobs.map(async blob=>decode(await blob.arrayBuffer())));
       panels=models.map(model=>{
         const {vertices,sample}=model;
         delete model.vertices; delete model.sample;
