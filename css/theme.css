@@ -95,9 +95,23 @@ body {
   }
   .cinema-title {top:0;padding:0 0 .6rem}
   .hero-scene {margin-block-start:0}
+}
+
+@supports (font: -apple-system-body) {
+  @media (min-width:601px) {
+    [data-theme="dark"] .cinema {
+      padding-top:var(--mast-height);
+      min-height:max(46rem,100svh);
+    }
+    [data-theme="dark"] .cinema-title {top:0;padding-bottom:1rem}
+    [data-theme="dark"] .hero-scene {margin:0 calc(-1 * var(--gutter))}
+  }
+}
+
+@media (max-width:600px) {
   [data-theme="dark"] .cinema {
-    --mobile-night:#231d2c;
-    background:linear-gradient(to bottom,#30243c,var(--mobile-night) 16rem) var(--mobile-night);
+    --hero-night:#231d2c;
+    background:linear-gradient(to bottom,#30243c,var(--hero-night) 16rem) var(--hero-night);
   }
   [data-theme="dark"] .cinema::before,
   [data-theme="dark"] .cinema::after,
@@ -105,7 +119,24 @@ body {
   [data-theme="dark"] .hero-scene {
     --fade-height:clamp(3.6rem,15vw,5rem);
     padding-top:var(--fade-height);
-    background:linear-gradient(to bottom,var(--mobile-night),#403947 18%,#827c88 44%,#ccc9cf 70%,#f5f4f6 90%,white) top / 100% var(--fade-height) no-repeat,white;
+    background:linear-gradient(to bottom,var(--hero-night),#403947 18%,#827c88 44%,#ccc9cf 70%,#f5f4f6 90%,white) top / 100% var(--fade-height) no-repeat,white;
+  }
+  [data-theme="dark"] .room {filter:none;mix-blend-mode:normal;background:white}
+  [data-theme="dark"] .transport {margin-inline:calc(-1 * var(--gutter));background:white}
+}
+
+@supports (font: -apple-system-body) {
+  [data-theme="dark"] .cinema {
+    --hero-night:#231d2c;
+    background:linear-gradient(to bottom,#30243c,var(--hero-night) 16rem) var(--hero-night);
+  }
+  [data-theme="dark"] .cinema::before,
+  [data-theme="dark"] .cinema::after,
+  [data-theme="dark"] .scroll-glass {display:none}
+  [data-theme="dark"] .hero-scene {
+    --fade-height:clamp(3.6rem,9svh,6rem);
+    padding-top:var(--fade-height);
+    background:linear-gradient(to bottom,var(--hero-night),#403947 18%,#827c88 44%,#ccc9cf 70%,#f5f4f6 90%,white) top / 100% var(--fade-height) no-repeat,white;
   }
   [data-theme="dark"] .room {filter:none;mix-blend-mode:normal;background:white}
   [data-theme="dark"] .transport {margin-inline:calc(-1 * var(--gutter));background:white}
