@@ -130,32 +130,32 @@
 .result-units {margin-top:1rem;font-size:.95rem;color:var(--muted)}
 .cinema-title .paper-title {margin:.35rem auto .7rem}
 .paper-title strong {
-  display:block;white-space:nowrap;font-size:clamp(1.8rem,2.6vw,3rem);
+  display:block;white-space:nowrap;font-size:clamp(2rem,2.95vw,3.35rem);
   font-weight:750;line-height:1.05;letter-spacing:-.06em;
 }
 .paper-title > span {
-  display:block;margin:.5rem auto 0;font-size:clamp(1rem,1.4vw,1.45rem);
-  font-weight:500;line-height:1.34;letter-spacing:-.028em;white-space:nowrap;
+  display:block;margin:.5rem auto 0;font-size:clamp(1.08rem,1.52vw,1.55rem);
+  font-weight:500;line-height:1.34;letter-spacing:-.028em;text-wrap:balance;
 }
 .cinema-title .authors,.cinema-title .affiliations {max-width:none;margin:0 auto;text-wrap:balance;letter-spacing:0}
 .cinema-title .authors {
   font-family:"Avenir Next",Avenir,"Helvetica Neue",Arial,sans-serif;
-  font-size:clamp(1rem,1.2vw,1.2rem);line-height:1.5;font-weight:500;color:#233f66;
+  font-size:clamp(1.05rem,1.32vw,1.3rem);line-height:1.5;font-weight:500;color:#233f66;
 }
 @media(max-width:600px) {
   .cinema {height:max(100svh,39rem)}
-  .paper-title strong {font-size:min(8.6vw,3rem)}
-  .paper-title > span {margin-inline:calc(-1 * var(--gutter) + .4rem);font-size:min(2.72vw,1rem)}
+  .paper-title strong {font-size:min(9.25vw,3.25rem)}
+  .paper-title > span {margin-inline:auto;max-width:36ch;font-size:clamp(.95rem,3.8vw,1.1rem)}
   .byline-break {display:none}
 }
 .authors a {color:#34599a;text-decoration:underline;text-decoration-color:#34599a60;text-underline-offset:.16em}
 .authors a:hover,.authors a:focus-visible {color:#633776;text-decoration-color:currentColor}
 .authors span,.affiliations span {display:inline-block}
 .cinema-title sup {font-size:.66em;line-height:0}
-.cinema-title .affiliations {margin-top:.45rem;font-size:clamp(.88rem,1.14vw,1.08rem);color:#4a4c5b;font-weight:450;line-height:1.5}
+.cinema-title .affiliations {margin-top:.45rem;font-size:clamp(.95rem,1.22vw,1.16rem);color:#4a4c5b;font-weight:450;line-height:1.5}
 .affiliations span+span {margin-left:.65em}
 .cinema .actions {margin-top:.8rem}
-.cinema .actions a {padding:.62rem 1rem}
+.cinema .actions a {font-size:clamp(.94rem,1.13vw,1.04rem);padding:.62rem 1rem}
 @media(min-width:960px){.byline-break{display:none}}
 .pipeline-section + .results {padding-top:clamp(3.5rem,7vw,7rem)}
 .paper-result {margin:clamp(2rem,4vw,3.8rem) 0 0}
@@ -240,10 +240,44 @@
   .contents a {gap:.24rem;font-size:.7rem}
   #comparison {padding-inline:.6rem}
   .paper-overview,.pipeline-section,.results {width:calc(100% - var(--contents-rail) - 1.2rem)}
-  .cinema h1 {font-size:clamp(2.8rem,14.7vw,5.75rem)}
+  .cinema h1 {font-size:clamp(2.9rem,15.6vw,6.25rem);position:relative;left:50%;transform:translateX(-50%);margin-inline:0;max-width:none}
 }
 .cinema {grid-template-columns:minmax(0,1fr)}
-#project {scroll-margin-top:50svh}
+#project {scroll-margin-top:50svh;white-space:nowrap}
+[data-theme="light"] #project {filter:drop-shadow(0 2px 1px #fff9) drop-shadow(0 3px 10px #8547aa24)}
+[data-theme="dark"] #project > span {
+  padding-inline-end:.075em;
+  background:linear-gradient(165deg,#fff6ff75,transparent 38%,#8350ba1a 57%,transparent 75%),
+    linear-gradient(103deg,#bda4ff 3%,#e4cbff 30%,#cba8f6 45%,#f6b3dc 73%,#ffb3c0 96%);
+  background-clip:text;
+  -webkit-background-clip:text;
+  -webkit-text-stroke:.45px #fff2ff59;
+  filter:drop-shadow(0 2px 1px #1f142c80) drop-shadow(0 0 .12em #ba76e83d);
+}
+#project {background-image:none}
+[data-theme="light"] #project > span {
+  background:var(--brand-gradient);
+  background-clip:text;
+  -webkit-background-clip:text;
+}
+.wordmark-tint {display:none}
+@media (prefers-reduced-motion:no-preference) and (forced-colors:none) {
+  #project > span {position:relative}
+  #project .wordmark-tint {
+    display:block;position:absolute;inset:0;pointer-events:none;
+    color:transparent;-webkit-text-stroke:0;
+    background-image:linear-gradient(103deg,#efb6d6 3%,#ddaeeb 30%,#d2a9f5 45%,#c8b1f2 73%,#c3aff9 96%);
+    background-clip:text;-webkit-background-clip:text;
+    animation:wordmark-colors 9s ease-in-out infinite alternate;
+  }
+  [data-theme="light"] #project .wordmark-tint {
+    background-image:linear-gradient(110deg,#862f65 4%,#963773 34%,#78438c 66%,#56418e 98%);
+  }
+  @keyframes wordmark-colors {from {opacity:0} to {opacity:1}}
+}
+@media(forced-colors:active){
+  [data-theme="dark"] #project > span {background:none;color:CanvasText;-webkit-text-stroke:0;filter:none}
+}
 .explore-link {
   display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:.15rem;
   min-width:5rem;min-height:2.9rem;padding:.15rem .5rem;color:#7a366d;text-decoration:none;

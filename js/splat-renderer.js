@@ -68,27 +68,17 @@ function upload(gl, bytes) {
   }
   const indices = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indices);
-  const order = new Uint32Array(count), depths = new Int32Array(count);
-  const bins = new Uint32Array(4096);
-  function sort(back) {
-    bins.fill(0);
-    let min=Infinity,max=-Infinity;
-    for (let i=0; i<count; i++) {
-      const j=i*8;
-      const d=Math.round(1000*(values[j]*back[0]+values[j+1]*back[1]+values[j+2]*back[2]));
-      depths[i]=d; min=Math.min(min,d); max=Math.max(max,d);
-    }
-    const step=(bins.length-1)/Math.max(1,max-min);
-    for (let i=0;i<count;i++) { depths[i]=Math.floor((depths[i]-min)*step); bins[depths[i]]++; }
-    let first=0;
-    for (let b=0;b<bins.length;b++) { const n=bins[b]; bins[b]=first; first+=n; }
-    for (let i=0;i<count;i++) order[bins[depths[i]]++]=i;
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,order,gl.DYNAMIC_DRAW);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,count * 4,gl.DYNAMIC_DRAW);
+  // Keep only the framing sample on the UI thread before transferring the model.
+  const stride=Math.max(1,Math.floor(count/5000));
+  const sample=new Float32Array(Math.ceil(count/stride)*3);
+  for(let i=0,j=0;i<count;i+=stride,j+=3) {
+    sample[j]=values[i*8]; sample[j+1]=values[i*8+1]; sample[j+2]=values[i*8+2];
   }
-  return {vao,sort,count,values};
+  return {vao,indices,count,sample};
 }
 
-export function createRenderer(canvas, buffers, centerEach = false) {
+export function createRenderer(canvas, buffers, centerEach, onReady, onError) {
   const gl = canvas.getContext('webgl2',{alpha:false,antialias:false,depth:false,powerPreference:'low-power'});
   if (!gl) throw Error('WebGL 2 unavailable');
   const program = programFor(gl);
@@ -98,20 +88,44 @@ export function createRenderer(canvas, buffers, centerEach = false) {
   gl.uniform1f(loc.maxPointSize,gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE)[1]);
   gl.enable(gl.BLEND); gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
   gl.clearColor(1,1,1,1);
-  let previousYaw,previousPitch;
+  const worker=new Worker(new URL('./splat-sort.js',import.meta.url),{type:'module'});
+  worker.postMessage({buffers},buffers);
+  let view, sortedYaw, sortedPitch, ready=false, pending=false;
+  worker.onerror=onError;
+  worker.onmessage=({data})=>{
+    for(let i=0;i<models.length;i++) {
+      gl.bindVertexArray(models[i].vao);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,models[i].indices);
+      gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER,0,data.orders[i]);
+    }
+    pending=false;
+    sortedYaw=data.yaw; sortedPitch=data.pitch;
+    const first=!ready;
+    ready=true;
+    draw(...view, data.orders);
+    if(first) onReady();
+  };
 
-  return function draw(yaw,pitch,zoom) {
+  function draw(yaw,pitch,zoom,recycle) {
+    view=[yaw,pitch,zoom];
     const dpr=Math.min(devicePixelRatio,2);
     const w=Math.max(1,Math.round(canvas.clientWidth*dpr/2)),h=Math.max(1,Math.round(canvas.clientHeight*dpr));
     if (canvas.width!==2*w || canvas.height!==h) { canvas.width=2*w; canvas.height=h; }
     const c=Math.cos(yaw),s=Math.sin(yaw),t=Math.sin(pitch),v=Math.cos(pitch);
     const right=[c,s,0], up=[-s*t,c*t,v], back=[s*v,-c*v,t];
-    const bounds = models.map(({values,count}) => {
+    if (!pending && (yaw!==sortedYaw || pitch!==sortedPitch)) {
+      pending=true;
+      const orders=recycle || [];
+      worker.postMessage({yaw,pitch,back,orders},orders.map(order=>order.buffer));
+    } else if(recycle) {
+      worker.postMessage({orders:recycle},recycle.map(order=>order.buffer));
+    }
+    if (!ready) return;
+    const bounds = models.map(({sample}) => {
       let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
-      const stride=Math.max(1,Math.floor(count/5000))*8;
-      for(let j=0;j<values.length;j+=stride) {
-        const x=values[j]*c+values[j+1]*s;
-        const y=values[j]*up[0]+values[j+1]*up[1]+values[j+2]*v;
+      for(let j=0;j<sample.length;j+=3) {
+        const x=sample[j]*c+sample[j+1]*s;
+        const y=sample[j]*up[0]+sample[j+1]*up[1]+sample[j+2]*v;
         x0=Math.min(x0,x); x1=Math.max(x1,x); y0=Math.min(y0,y); y1=Math.max(y1,y);
       }
       return {x0,x1,y0,y1};
@@ -128,10 +142,9 @@ export function createRenderer(canvas, buffers, centerEach = false) {
       gl.viewport(i*w,0,w,h);
       gl.enable(gl.SCISSOR_TEST); gl.scissor(i*w,0,w,h);
       gl.bindVertexArray(model.vao);
-      if (yaw!==previousYaw || pitch!==previousPitch) model.sort(back);
       gl.drawElements(gl.POINTS,model.count,gl.UNSIGNED_INT,0);
     }
     gl.disable(gl.SCISSOR_TEST);
-    previousYaw=yaw; previousPitch=pitch;
-  };
+  }
+  return {draw, dispose:()=>worker.terminate()};
 }

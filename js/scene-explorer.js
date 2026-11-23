@@ -1,7 +1,7 @@
-import {createRenderer} from './splat-renderer.js?v=panel-centers';
+import {createRenderer} from './splat-renderer.js?v=sharp-orbit';
 
 const clamp = (n,min,max) => Math.max(min,Math.min(max,n));
-let closeActive;
+let closeActive, releaseCached;
 
 for (const figure of document.querySelectorAll('.film')) {
   const viewport=figure.querySelector('.viewport');
@@ -17,13 +17,15 @@ for (const figure of document.querySelectorAll('.film')) {
   status.setAttribute('role','status');
   viewport.append(mode,status);
 
-  let request,canvas,render,resize,frame,pointer,suppressClick,wasPlaying;
-  let yaw,pitch,zoom;
+  let load, canvas, renderer, frame, pointer, suppressClick, wasPlaying;
+  let ready=false, expiry, loadingHint, hoverTimer;
+  let yaw=.93, pitch=.64, zoom=1;
+  const resize=new ResizeObserver(redraw);
   function redraw() {
-    if (!render || frame) return;
+    if (!renderer || frame || !figure.dataset.exploring) return;
     frame=requestAnimationFrame(()=>{
       frame=0;
-      if (render) render(yaw,pitch,zoom);
+      renderer?.draw(yaw,pitch,zoom);
     });
   }
   function turn(dx,dy) {
@@ -31,16 +33,16 @@ for (const figure of document.querySelectorAll('.film')) {
     pitch=clamp(pitch+dy*.009,-1.4,1.48);
     redraw();
   }
+  function expireLater() {
+    clearTimeout(expiry);
+    expiry=setTimeout(release,60000);
+  }
   function leave({resume = wasPlaying} = {}) {
-    if (!request) return;
-    request.abort(); request=null;
-    resize?.disconnect(); resize=null;
-    cancelAnimationFrame(frame); frame=0; render=null;
-    if (canvas) {
-      canvas.removeEventListener('webglcontextlost',lost);
-      canvas.getContext('webgl2')?.getExtension('WEBGL_lose_context')?.loseContext();
-      canvas.remove(); canvas=null;
-    }
+    if (!figure.dataset.exploring) return;
+    clearTimeout(loadingHint);
+    cancelAnimationFrame(frame); frame=0;
+    resize.disconnect();
+    if (canvas) canvas.style.visibility='hidden';
     delete figure.dataset.exploring;
     mode.textContent='Explore 3D';
     mode.setAttribute('aria-pressed','false');
@@ -48,29 +50,41 @@ for (const figure of document.querySelectorAll('.film')) {
     closeActive=null;
     surface.setAttribute('aria-label',(video.paused?'Play ':'Pause ')+figure.dataset.scene+' comparison');
     if (resume && !document.hidden && visibleClips.has(video)) video.play().catch(()=>{});
+    expireLater();
   }
-  function lost(e) {
-    e.preventDefault();
-    leave();
-    status.textContent='3D unavailable · Showing replay';
+  function release() {
+    clearTimeout(expiry);
+    load?.abort(); load=null;
+    renderer?.dispose(); renderer=null;
+    if (canvas) {
+      canvas.removeEventListener('webglcontextlost',failed);
+      canvas.getContext('webgl2')?.getExtension('WEBGL_lose_context')?.loseContext();
+      canvas.remove(); canvas=null;
+    }
+    ready=false;
+    if(releaseCached===release) releaseCached=null;
   }
-  async function explore(entry) {
-    if (request) return;
-    closeActive?.();
-    closeActive=leave;
+  function failed(error) {
+    error.preventDefault?.();
+    if (figure.dataset.exploring) {
+      leave();
+      status.textContent='3D unavailable · Showing replay';
+    }
+    release();
+  }
+  function showScene() {
+    if(!figure.dataset.exploring) return;
+    clearTimeout(loadingHint);
+    canvas.style.visibility='visible';
+    status.textContent=figure.dataset.exploring==='drag' ? 'Release drag to play' : 'Drag to orbit';
+  }
+  async function prepare() {
+    if(load) return;
+    releaseCached?.();
+    releaseCached=release;
     const active=new AbortController();
-    request=active;
-    yaw=.93; pitch=.64; zoom=1;
-    wasPlaying=!video.paused;
-    figure.dataset.exploring=entry;
-    video.pause();
-    mode.textContent='Back to video';
-    mode.setAttribute('aria-pressed','true');
-    status.textContent='Loading 3D…';
-    const instructions = entry === 'drag'
-      ? 'Drag to orbit. Release to resume the video.'
-      : 'Drag or use the arrow keys to orbit. Scroll or use + and − to zoom. Escape to return to video.';
-    surface.setAttribute('aria-label',instructions);
+    load=active;
+    if(!figure.dataset.exploring) expireLater();
     try {
       const buffers=await Promise.all(['activegs','roam'].map(async method=>{
         const url='models/'+figure.dataset.scene+'-'+method+'.splat';
@@ -78,27 +92,59 @@ for (const figure of document.querySelectorAll('.film')) {
         if (!res.ok) throw Error('Model unavailable');
         return res.arrayBuffer();
       }));
-      if (active.signal.aborted) return;
+      if(active.signal.aborted) return;
       canvas=document.createElement('canvas');
       canvas.className='orbit-view';
+      canvas.style.visibility='hidden';
       canvas.setAttribute('aria-hidden','true');
       viewport.insertBefore(canvas,surface);
-      canvas.addEventListener('webglcontextlost',lost);
-      render=createRenderer(canvas,buffers,figure.hasAttribute('data-center-each'));
-      render(yaw,pitch,zoom);
-      resize=new ResizeObserver(redraw);
-      resize.observe(viewport);
-      status.textContent = entry === 'drag' ? 'Release drag to play' : 'Drag to orbit';
-    } catch (error) {
-      if (active.signal.aborted) return;
+      canvas.addEventListener('webglcontextlost',failed);
+      renderer=createRenderer(canvas,buffers,figure.hasAttribute('data-center-each'),()=>{
+        ready=true;
+        showScene();
+      },failed);
+      renderer.draw(yaw,pitch,zoom);
+    } catch(error) {
+      if(active.signal.aborted) return;
       console.warn('Scene explorer:',error);
-      leave();
-      status.textContent='3D unavailable · Showing replay';
+      failed(error);
+    }
+  }
+  function explore(entry) {
+    closeActive?.();
+    closeActive=leave;
+    clearTimeout(expiry);
+    yaw=.93; pitch=.64; zoom=1;
+    wasPlaying=!video.paused;
+    figure.dataset.exploring=entry;
+    video.pause();
+    mode.textContent='Back to video';
+    mode.setAttribute('aria-pressed','true');
+    surface.setAttribute('aria-label',entry==='drag'
+      ? 'Drag to orbit. Release to resume the video.'
+      : 'Drag or use the arrow keys to orbit. Scroll or use + and − to zoom. Escape to return to video.');
+    resize.observe(viewport);
+    if(ready) {
+      renderer.draw(yaw,pitch,zoom);
+      showScene();
+    } else {
+      status.textContent='';
+      loadingHint=setTimeout(()=>{status.textContent='Loading 3D…';},180);
+      prepare();
     }
   }
 
+  // Warm the viewer on deliberate interest, without downloading every gallery model.
+  function warm() {
+    if(!closeActive && !navigator.connection?.saveData) prepare();
+  }
+  viewport.addEventListener('pointerenter',e=>{
+    if(e.pointerType==='mouse') hoverTimer=setTimeout(warm,220);
+  });
+  viewport.addEventListener('pointerleave',()=>clearTimeout(hoverTimer));
+  mode.addEventListener('focus',warm);
   mode.addEventListener('click',()=>{
-    if (request) leave();
+    if (figure.dataset.exploring) leave();
     else { explore('button'); surface.focus({preventScroll:true}); }
   });
   surface.addEventListener('pointerdown',e=>{
@@ -113,7 +159,7 @@ for (const figure of document.querySelectorAll('.film')) {
     if (!pointer.drag && Math.hypot(dx,dy)<5) return;
     pointer.drag=true;
     suppressClick=true;
-    if (!request) explore('drag');
+    if (!figure.dataset.exploring) explore('drag');
     turn(dx,dy);
     pointer.x=e.clientX; pointer.y=e.clientY;
   });
@@ -121,6 +167,7 @@ for (const figure of document.querySelectorAll('.film')) {
     if (event.pointerId !== pointer?.id) return;
     const dragged = pointer.drag;
     pointer = null;
+    if (dragged) redraw();
     if (dragged && figure.dataset.exploring === 'drag') {
       leave({resume: event.type === 'pointerup' || wasPlaying});
     }
@@ -129,17 +176,17 @@ for (const figure of document.querySelectorAll('.film')) {
   surface.addEventListener('pointercancel', finishDrag);
   surface.addEventListener('lostpointercapture', finishDrag);
   surface.addEventListener('click',e=>{
-    if (request || (suppressClick && e.detail !== 0)) e.stopImmediatePropagation();
+    if (figure.dataset.exploring || (suppressClick && e.detail !== 0)) e.stopImmediatePropagation();
     suppressClick=false;
   },true);
   surface.addEventListener('wheel',e=>{
-    if (!request || e.ctrlKey) return;
+    if (!figure.dataset.exploring || e.ctrlKey) return;
     e.preventDefault();
     zoom=clamp(zoom*Math.exp(-e.deltaY*.002),.65,2.8);
     redraw();
   },{passive:false});
   viewport.addEventListener('keydown',e=>{
-    if (!request) return;
+    if (!figure.dataset.exploring) return;
     if (e.key==='Escape') { leave(); mode.focus(); return; }
     if (e.target!==surface) return;
     const delta={ArrowLeft:[-7,0],ArrowRight:[7,0],ArrowUp:[0,6],ArrowDown:[0,-6]}[e.key];
