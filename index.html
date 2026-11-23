@@ -521,8 +521,23 @@ const observer=new IntersectionObserver(entries=>{
   if(!visibleClips.has(preferredClip)) preferredClip=null;
   syncPlayback();
 },{threshold:[0,.20,.5,.8,1]});
+// Some networks fail a video byte-range request even though the complete MP4 is readable.
+async function recoverReplay(clip) {
+  if(clip.dataset.retried || !clip.error || clip.error.code===1) return;
+  clip.dataset.retried='';
+  try {
+    const response=await fetch(clip.currentSrc || clip.src,{cache:'reload'});
+    if(!response.ok) return;
+    const blob=await response.blob();
+    clip.src=URL.createObjectURL(blob);
+    clip.load();
+    if(shouldPlay(clip) || (reducedMotion.matches && preferredClip===clip && !document.hidden &&
+       !document.querySelector('.film[data-orbit-ready]'))) clip.play().catch(()=>{});
+  } catch { /* Keep the poster and the manual replay control available. */ }
+}
 for(const clip of clips){
   clip.muted = true;
+  clip.addEventListener('error',()=>recoverReplay(clip));
   observer.observe(clip);
 }
 document.addEventListener('replay-choice',event=>{
@@ -572,6 +587,6 @@ for (const replay of [room, matchingReplay]) {
   replay.addEventListener('playing', alignReplay);
 }
 </script>
-<script type="module" src="js/scene-explorer.js?v=dense-ply-2"></script>
+<script type="module" src="js/scene-explorer.js?v=dense-ply-3"></script>
 </body>
 </html>

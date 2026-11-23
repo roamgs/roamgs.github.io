@@ -202,3 +202,15 @@ for (const figure of document.querySelectorAll('.film')) {
     e.preventDefault();
   });
 }
+
+// Begin the first pair while the visitor is still at a gallery navigation link.
+for(const link of document.querySelectorAll('a[href="#comparison"], a[href^="#scene-"]')) {
+  const warmDestination=()=>{
+    const destination=document.getElementById(link.hash.slice(1));
+    const card=destination?.matches('.film')?destination:destination?.querySelector('.film');
+    warmCandidates.get(card)?.();
+  };
+  link.addEventListener('pointerenter',event=>{if(event.pointerType==='mouse') warmDestination();});
+  link.addEventListener('focus',warmDestination);
+  link.addEventListener('pointerdown',warmDestination);
+}
