@@ -202,9 +202,9 @@ summary:hover {color: var(--ink)}
 }
 
 </style>
-<link rel="stylesheet" href="css/gallery-glass.css?v=wordmark-colors">
+<link rel="stylesheet" href="css/gallery-glass.css?v=scene-assets">
 <link rel="stylesheet" href="css/results.css?v=replica">
-<link rel="stylesheet" href="css/theme.css?v=theme-switch">
+<link rel="stylesheet" href="css/theme.css?v=mobile-hero">
 </head>
 <body>
 
@@ -491,6 +491,11 @@ reducedMotion.addEventListener('change',()=>{
 const room = document.getElementById('cinema-film');
 room.defaultPlaybackRate = 1.25;
 room.playbackRate = room.defaultPlaybackRate;
+const sceneAnchor = location.hash.match(/^#(scene-.+)-\d+$/);
+if (sceneAnchor && document.getElementById(sceneAnchor[1])) {
+  history.replaceState(history.state, '', location.pathname + location.search + '#' + sceneAnchor[1]);
+  document.getElementById(sceneAnchor[1]).scrollIntoView();
+}
 const matchingReplay = document.querySelector('#scene-00848-ziup5kvtCCR video');
 matchingReplay.defaultPlaybackRate = matchingReplay.playbackRate = room.defaultPlaybackRate;
 let lastReplay;
@@ -513,6 +518,6 @@ for (const replay of [room, matchingReplay]) {
   replay.addEventListener('playing', alignReplay);
 }
 </script>
-<script type="module" src="js/scene-explorer.js?v=aligned-orbit"></script>
+<script type="module" src="js/scene-explorer.js?v=scene-assets"></script>
 </body>
 </html>

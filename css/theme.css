@@ -86,3 +86,27 @@ body {
 }
 .theme-switch svg {width:1.4rem;height:1.4rem}
 .theme-switch:hover {background:color-mix(in srgb,currentColor 9%,transparent)}
+
+@media (max-width:600px) {
+  .cinema {
+    height:auto;min-height:100svh;
+    padding-top:calc(var(--mast-height) + .9rem);
+    grid-template-rows:auto minmax(min(84vw,21rem),1fr) auto;
+  }
+  .cinema-title {top:0;padding:0 0 .6rem}
+  .hero-scene {margin-block-start:0}
+  [data-theme="dark"] .cinema {
+    --mobile-night:#231d2c;
+    background:linear-gradient(to bottom,#30243c,var(--mobile-night) 16rem) var(--mobile-night);
+  }
+  [data-theme="dark"] .cinema::before,
+  [data-theme="dark"] .cinema::after,
+  [data-theme="dark"] .scroll-glass {display:none}
+  [data-theme="dark"] .hero-scene {
+    --fade-height:clamp(3.6rem,15vw,5rem);
+    padding-top:var(--fade-height);
+    background:linear-gradient(to bottom,var(--mobile-night),#403947 18%,#827c88 44%,#ccc9cf 70%,#f5f4f6 90%,white) top / 100% var(--fade-height) no-repeat,white;
+  }
+  [data-theme="dark"] .room {filter:none;mix-blend-mode:normal;background:white}
+  [data-theme="dark"] .transport {margin-inline:calc(-1 * var(--gutter));background:white}
+}
