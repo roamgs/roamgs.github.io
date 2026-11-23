@@ -204,7 +204,7 @@ summary:hover {color: var(--ink)}
 </style>
 <link rel="stylesheet" href="css/gallery-glass.css?v=scene-assets">
 <link rel="stylesheet" href="css/results.css?v=replica">
-<link rel="stylesheet" href="css/theme.css?v=light-webkit">
+<link rel="stylesheet" href="css/theme.css?v=room-cutout">
 </head>
 <body>
 
@@ -263,7 +263,22 @@ summary:hover {color: var(--ink)}
     <div class="actions"><a class="paper-link" href="#comparison"><svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="19" height="15" rx="3"/><path d="m10 9 5 3-5 3z"/></svg> Watch comparisons</a></div>
   </div>
   <figure class="hero-scene">
-    <video id="cinema-film" class="room" poster="media/hero.jpg" src="media/hero.mp4" muted loop playsinline preload="metadata" aria-label="ROAM-GS incremental Gaussian reconstruction of HM3D 00848"></video>
+    <video id="cinema-film" class="room" poster="media/hero-cutout.webp" muted loop playsinline preload="metadata" aria-label="ROAM-GS incremental Gaussian reconstruction of HM3D 00848"></video>
+    <script>
+      (() => {
+        const film = document.getElementById('cinema-film');
+        if (CSS.supports('font', '-apple-system-body') && film.canPlayType('video/mp4; codecs="hvc1"')) {
+          film.dataset.alpha = '';
+          film.addEventListener('error', () => {
+            delete film.dataset.alpha;
+            film.src = 'media/hero.mp4';
+          }, {once:true});
+          film.src = 'media/hero-alpha.mov';
+        } else {
+          film.src = 'media/hero.mp4';
+        }
+      })();
+    </script>
   </figure>
   <div class="scroll-glass" aria-hidden="true"></div>
   <div class="transport">
