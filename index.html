@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="js/theme.js?v=appearance"></script>
+<title>ROAM-GS · Go Far, Look Less</title>
+<link rel="icon" type="image/png" sizes="32x32" href="figures/roam-orbit.png">
+<link rel="icon" type="image/svg+xml" sizes="any" href="figures/roam-orbit.svg">
+<style>
+:root {
+  color-scheme: light;
+  --ink: #211835;
+  --muted: #655d70;
+  --brand-gradient: linear-gradient(110deg,#302044 4%,#512675 34%,#9d2b84 66%,#be495b 98%);
+  --plum: #643194;
+  --line: #e2dce9;
+  --mono: "SFMono-Regular", Consolas, monospace;
+  --gutter: clamp(1rem, 6.5vw, 6rem);
+  --content-width: 72rem;
+  --mast-height:clamp(2.8rem,5svh,3.6rem);
+}
+* {box-sizing: border-box}
+html {scroll-behavior: smooth}
+body {margin: 0; font-family: Inter, "Helvetica Neue", Arial, sans-serif; color: var(--ink); background: #fff}
+a {color: inherit; text-underline-offset: .22em}
+button {font: inherit; cursor: pointer}
+:focus-visible {outline: 3px solid #8f56ca; outline-offset: 4px}
+.sr-only {position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%)}
+.hero {position: relative; isolation: isolate; display: grid; grid-template-rows: auto 1fr auto; min-height: 40rem; height: 100svh; overflow: hidden; background: white}
+.backdrop {position: absolute; z-index: -2; inset: auto 0 0; width: 100%; height: 100%; object-fit: cover; object-position: center bottom}
+.hero::before {content: ""; position: absolute; z-index: -1; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 10% 1%, #d5b5ff31, transparent 32%), radial-gradient(ellipse at 90% 6%, #b5e7e835, transparent 30%), linear-gradient(180deg, white 1%, #ffffffed 14%, #ffffff83 32%, transparent 53%)}
+.heading {grid-row: 1; text-align: center; padding: clamp(1.4rem, 3.5svh, 3.5rem) 1rem 0}
+h1, h2, h3, h4, p {margin: 0}
+h1 {width: max-content; max-width: 100%; margin: auto; font-size: clamp(4rem, min(12.2vw, 15svh), 12rem); line-height: .96; font-weight: 720; letter-spacing: -.065em; background: linear-gradient(105deg, #6938ba 2%, #a140cf 42%, #dd58ba 77%, #eb759e); background-clip: text; -webkit-background-clip: text; color: transparent}
+.heading h2 {margin-top: .55rem; font-size: clamp(1.7rem, 3.1vw, 3.25rem); line-height: 1.04; letter-spacing: -.055em; text-wrap: balance}
+.subtitle {display: block; max-width: 43em; margin: .55em auto 0; font-size: clamp(1rem, 1.4vw, 1.4rem); line-height: 1.38; letter-spacing: -.018em; font-weight: 480; color: #433a50}
+.links {display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: .45rem; margin: 1.15rem auto 0}
+.links a, .play, .film nav a, summary {transition: background-color .18s, color .18s, border-color .18s}
+.links a, .play {display: inline-flex; align-items: center; justify-content: center; gap: .4rem; text-decoration: none; border-radius: 2rem; padding: .62rem 1rem; font-size: .9rem; line-height: 1.25; font-weight: 570; border: 1px solid #dbd5e2; background: #fffffff2}
+.links a:first-child {background: var(--ink); border-color: var(--ink); color: white}
+.links a:hover, .play:hover {background: #f0e9f8; color: #402258}
+.links svg {width: 1rem; height: 1rem; stroke: currentColor; stroke-width: 1.55; fill: none}
+.footer {grid-row: 3; display: flex; justify-content: space-between; align-items: flex-end; gap: .5rem; padding: 1rem var(--gutter) clamp(1rem, 3svh, 2.5rem)}
+.meta {padding: .65rem .95rem .75rem; min-width: 14rem; display: grid; gap: .28rem; border: 1px solid #dcd4e3; border-radius: .85rem; background: #ffffffed; backdrop-filter: blur(16px); box-shadow: 0 5px 22px #35214410}
+.meta strong {font-size: .9rem; font-weight: 650}
+.meta output {font: .75rem/1.25 var(--mono); color: var(--muted)}
+.track {display: block; height: 3px; overflow: hidden; background: #e9e3ef; border-radius: 4px}
+.track i {display: block; width: 100%; height: 100%; transform-origin: left; background: linear-gradient(90deg, #8041c6, #de74aa)}
+.play {color: var(--ink); box-shadow: 0 3px 18px #3521440f}
+.demos {padding: clamp(3.5rem, 7vw, 7.5rem) var(--gutter); background: #f6f4f8; border-top: 1px solid var(--line)}
+.gallery-inner {max-width: var(--content-width); margin: auto}
+.section-head {display: grid; grid-template-columns: minmax(0,1fr) minmax(19rem,.73fr); gap: clamp(1.5rem, 5vw, 6rem); align-items: start}
+.section-head h2 {font-size: clamp(2.05rem, 4vw, 3.85rem); font-weight: 600; line-height: .99; letter-spacing: -.068em; text-wrap: balance}
+.section-head h2 span {color: var(--plum)}
+.intro, details p {font-size: 1rem; line-height: 1.56; color: var(--muted); max-width: 65ch}
+details {margin-top: .65rem}
+details p {margin-top: .45rem; font-size: .95rem}
+summary {cursor: pointer; color: var(--plum); font-size: .92rem; font-weight: 600}
+summary:hover {color: var(--ink)}
+.dataset {display: flex; gap: 1.1rem; align-items: center; margin: clamp(2.5rem, 5vw, 4.6rem) 0 1rem; font: 600 1.1rem/1.2 var(--mono); letter-spacing: .04em}
+.dataset::after {content: ""; flex: 1; height: 1px; background: var(--line)}
+.films {display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: clamp(.95rem, 2vw, 1.8rem)}
+.film {min-width: 0; margin: 0; scroll-margin-top: 1rem; border: 1px solid var(--line); border-radius: 1.15rem; background: #fff; overflow: hidden; box-shadow: 0 8px 25px #37294108}
+.film video {display: block; width: 100%; height: auto; aspect-ratio: 16/9; background: white}
+.film figcaption {padding: 1.1rem clamp(1rem, 2vw, 1.65rem); border-top: 1px solid var(--line)}
+.film h4 {font-size: clamp(1.15rem, 1.55vw, 1.65rem); font-weight: 620; line-height: 1.2; letter-spacing: -.042em; overflow-wrap: anywhere}
+.film nav {display: flex; align-items: center; flex-wrap: wrap; gap: .45rem 1.1rem; margin-top: .9rem; font-size: .875rem; color: var(--plum)}
+.film nav a:hover {color: var(--ink)}
+.feature {grid-column: 1/-1; display: grid; grid-template-columns: minmax(0,2.4fr) minmax(14.5rem,1fr)}
+.feature figcaption {display: flex; flex-direction: column; justify-content: center; border: 0; border-left: 1px solid var(--line); background: linear-gradient(140deg,#fff,#f7f1ff)}
+.feature h4 {font-size: clamp(1.7rem, 2.8vw, 3.2rem)}
+.feature nav {align-items: start; flex-direction: column; gap: .55rem}
+#dense-mapping {background: radial-gradient(ellipse at top right,#3c294a,transparent 58%), #1e1927; color: #fcf8ff; --muted: #dbd2e5; --plum: #e4b7ff; --line: #51445c}
+#dense-mapping .film {max-width: 76rem; margin: clamp(1.5rem, 3vw, 3rem) auto 0; background: #2b2234}
+#dense-mapping figcaption {display: flex; justify-content: space-between; align-items: center; gap: 1rem}
+#dense-mapping nav {margin: 0}
+#dense-mapping a:hover {color: white}
+@media(max-width: 760px) {
+  .hero {height: min(88svh, 56rem); min-height: 33rem}
+  .backdrop {width: 124%; left: -12%; bottom: 5%; height: auto; aspect-ratio: 16/9; object-fit: contain}
+  .heading {padding-top: clamp(2.2rem,6svh,4rem)}
+  .hero::before {background: radial-gradient(ellipse at 10% 0,#d5b5ff30,transparent 44%)}
+  .links a, .play {font-size: .875rem; padding: .6rem .8rem}
+  .section-head, .films, .feature {grid-template-columns: 1fr}
+  .section-head {gap: 1rem}
+  .feature figcaption {border: 0; border-top: 1px solid var(--line)}
+  .feature h4 {font-size: 1.3rem}
+  .feature nav {flex-direction: row; gap: .5rem 1rem}
+  .meta {min-width: 0}
+}
+@media(max-width: 480px) {
+  .hero {height: clamp(34rem, 73svh, 41rem)}
+  .subtitle {max-width: 24rem}
+  .links {gap: .35rem}
+  .links a {padding: .58rem .72rem}
+  .footer {padding-inline: .75rem}
+  .meta strong {font-size: .82rem}
+  #dense-mapping figcaption {flex-wrap: wrap}
+}
+@media(min-aspect-ratio:2/1) {.backdrop {object-fit: contain}.hero {min-height: 28rem}}
+@media(prefers-reduced-motion:reduce) {html {scroll-behavior: auto} *, *::before, *::after {transition: none!important}}
+
+.links, .meta, .play, .film figcaption {
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+  backdrop-filter: blur(18px) saturate(145%);
+  box-shadow: inset 0 1px 0 #ffffffb8, 0 8px 30px #3d345b12;
+}
+.links {width:fit-content; max-width:100%; padding:.28rem; border-radius:2rem; border:1px solid #887a9f38; background:#ffffff9c; gap:.12rem}
+.links a {background:transparent; border-color:transparent}
+.links a:hover, .play:hover {background:#efe6f6da}
+.meta, .play {background:linear-gradient(125deg,#fffffff0,#f8f5ffbc); border:1px solid #baabc46b}
+.meta {gap:.39rem; border-radius:1rem}
+.meta output {font-variant-numeric:tabular-nums}
+.coverage-readout {display:flex; align-items:center; justify-content:space-between; gap:.8rem; border-top:1px solid #594b691e; padding-top:.32rem}
+.coverage-readout b {font:600 .9rem/1.25 Inter,Arial,sans-serif; color:#236f67}
+.coverage-readout em {display:block; font:normal .72rem/1.35 var(--mono); color:var(--muted)}
+.coverage-readout svg {width:5rem; height:1.8rem; overflow:visible}
+#comparison {background:radial-gradient(ellipse at 10% 15%,#e3d9f384,transparent 36%),radial-gradient(ellipse at 96% 70%,#c9e8e799,transparent 38%),#f6f5f8}
+.film {background:#ffffffb5; border-color:#aca4b84f; box-shadow:0 12px 32px #31213f0b, inset 0 1px 0 #fff}
+.film figcaption {background:linear-gradient(125deg,#ffffffc7,#f4effa91); border-color:#cfc7db7a}
+#dense-mapping figcaption {background:linear-gradient(115deg,#4c3c5bba,#322b3cce); box-shadow:inset 0 1px 0 #ffffff1c}
+.track i {transition: transform 65ms linear}
+@media (prefers-reduced-motion:no-preference) {
+  .links a,.play,.film {transition:box-shadow .35s ease, background-color .25s ease, transform .35s ease}
+  .film:focus-within {box-shadow:0 12px 35px #50336524}
+  .hero::before {background-size:110% 105%; animation:glaze 16s ease-in-out infinite alternate}
+  @keyframes glaze {from{background-position:0% 0%}to{background-position:90% 20%}}
+}
+@media (hover:hover) and (prefers-reduced-motion:no-preference) {
+  .links a:hover,.play:hover {transform:translateY(-1px)}
+  .film:hover {box-shadow:0 14px 42px #49365e19}
+}
+@media(max-width:600px) {
+  .links {border-radius:1.3rem}
+  .links a {padding:.54rem .61rem}
+  .meta {padding:.45rem .69rem}
+  .coverage-readout svg {width:3.7rem}
+  .hero .backdrop {bottom:12%}
+}
+.hero-counts {display:grid;gap:.16rem}
+.hero-counts > span {display:flex;justify-content:space-between;align-items:baseline;gap:.8rem;color:var(--muted);font-size:.76rem}
+.cinema {position:relative; isolation:isolate; display:grid; grid-template-rows:auto minmax(0,1fr) auto; min-height:44rem; height:100svh; padding:var(--mast-height) var(--gutter) 0; color:#211f2a; background:radial-gradient(ellipse at 50% 51%,#fff 6%,#fff9 41%,transparent 76%),linear-gradient(112deg,#dbd0ec 0%,#f7f2fc 41%,#fffafb 69%,#fceef3 100%); overflow:hidden}
+.hero-scene {margin:0;margin-block-start:clamp(-3.2rem,-5svh,-1.8rem);min-height:0;display:grid;grid-template-rows:minmax(0,1fr);text-align:center}
+@media(min-width:60rem) {
+ .cinema {grid-template-rows:auto minmax(0,1fr) auto;padding-top:.45rem}
+ .cinema .cinema-title {padding-bottom:.25rem}
+ .cinema .cinema-title .paper-title {margin:.2rem auto .4rem}
+ .cinema .cinema-title .actions {margin-top:.5rem}
+ .mast {top:.45rem}
+}
+@media(max-width:600px) {
+ .hero-scene {margin-inline:calc(-1 * var(--gutter))}
+}
+.room {display:block;width:100%;height:100%;min-height:0;object-fit:contain;object-position:center;mix-blend-mode:multiply}
+.mast,.transport {display:flex; align-items:center; justify-content:space-between; position:relative}
+.mast {position:fixed;z-index:11;right:var(--gutter);justify-content:flex-end;height:var(--mast-height); font-size:.86rem; font-weight:620}
+.mast a,.actions a {text-decoration:none}
+.signature {display:flex; align-items:center; gap:.65rem; font-size:.95rem; letter-spacing:-.04em}
+.orbit {display:block;width:clamp(2.05rem,3.4vw,2.65rem);height:auto;flex:none}
+.cinema-title {position:relative; top:clamp(1rem,min(4.5svh,3.8vw),2.6rem); z-index:1; text-align:center; padding:0 0 .65rem}
+#project {display:flex;align-items:center;gap:.12em}
+.title-orbit {width:.78em;height:auto}
+.cinema h1 {font-family:Inter,"Helvetica Neue",Arial,sans-serif; font-size:clamp(4rem,min(8.6vw,10svh),7.2rem); line-height:1.04; font-weight:720; letter-spacing:-.085em; padding-right:.075em; background-image:var(--brand-gradient);}
+.cinema-title h2 {margin:.7rem 0 .5rem; font-size:clamp(2rem,3.5vw,4rem); font-weight:590; line-height:1.05; letter-spacing:-.068em}
+.cinema-title p {font-size:clamp(1rem,1.4vw,1.45rem); line-height:1.34; font-weight:490; letter-spacing:-.028em; text-wrap:balance}
+.actions {display:flex;justify-content:center;gap:.55rem;flex-wrap:wrap;margin-top:clamp(1.4rem,3svh,2.3rem)}
+.actions a {display:inline-flex; gap:.65rem; align-items:center;justify-content:center;border-radius:999px; padding:.86rem 1.28rem; border:1px solid #fff9; background:#fffc; backdrop-filter:blur(15px);color:#282129;font-size:.93rem;font-weight:620;box-shadow:0 3px 12px #29223112}
+.actions .paper-link {color:white;background:#26232d;border-color:#26232d}
+.actions a:hover {box-shadow:0 3px 18px #29223136}
+.triangle {width:0;height:0;border-left:8px solid currentColor;border-top:5px solid transparent;border-bottom:5px solid transparent}
+.transport {min-height:3.1rem; justify-content:center}
+.scroll-glass {display:none}
+@media (prefers-reduced-motion: no-preference) {
+  .scroll-glass {
+    display:block; position:absolute; inset:20% 0 0; pointer-events:none;
+    opacity:var(--scroll-frost, 0);
+    background:linear-gradient(115deg, #eee8f969, #fff9 55%, #f9edf56b);
+    -webkit-backdrop-filter:blur(12px) saturate(110%);
+    backdrop-filter:blur(12px) saturate(110%);
+    -webkit-mask-image:linear-gradient(transparent, #0006 30%, #000 82%);
+    mask-image:linear-gradient(transparent, #0006 30%, #000 82%);
+  }
+}
+.replay {padding:clamp(3.5rem,7vw,7rem) var(--gutter);background:linear-gradient(#fff9fc,white 52%)}
+.replay-inner {width:min(100%,73rem); margin:auto}
+.replay header {text-align:center}
+.replay header p {color:#775f76; font:600 .72rem var(--mono);letter-spacing:.13em}
+.replay h2 {font:550 clamp(2.6rem,5.3vw,5.5rem)/1.06 Inter,"Helvetica Neue",Arial,sans-serif;letter-spacing:-.07em;margin:.65rem 0 1.1rem;text-wrap:balance}
+.cutaway {display:block;width:100%;aspect-ratio:16/9;background:white;object-fit:contain;border-radius:1.3rem;border:1px solid #48384416}
+.replay .footer {padding:.9rem 0 0; align-items:center}
+@media(max-width:600px){
+ .cinema{min-height:39rem}
+ :root{--mast-height:3rem}
+ .cinema-title{padding:.5rem 0}
+ .cinema h1{font-size:clamp(3rem,16.5vw,6rem)}
+ .cinema-title h2{font-size:clamp(2.1rem,8.6vw,3rem);margin:.85rem 0 .65rem}
+ .cinema-title p{font-size:1.04rem;max-width:30ch;margin:auto}
+ .actions a{padding:.78rem .97rem;font-size:.84rem;gap:.4rem}
+ .transport{padding:.25rem 0}
+ .replay .footer{align-items:flex-end}
+}
+
+</style>
+<link rel="stylesheet" href="css/gallery-glass.css?v=method-name">
+<link rel="stylesheet" href="css/results.css?v=replica">
+<link rel="stylesheet" href="css/theme.css?v=homepage-appearance">
+</head>
+<body>
+
+<header class="mast">
+    <a class="signature" href="#project" aria-label="ROAM-GS home"><svg class="orbit" viewBox="0 0 72 50" aria-hidden="true" focusable="false">
+      <defs>
+        <filter id="room-background-matte" color-interpolation-filters="sRGB" x="0" y="0" width="100%" height="100%">
+          <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -4.5 -8 -4.5 0 16.6"/>
+          <feComposite in="SourceGraphic" operator="in"/>
+        </filter>
+        <linearGradient id="orbit-color" gradientUnits="userSpaceOnUse" x1="6" y1="18" x2="66" y2="33">
+        <stop stop-color="#512675"/><stop offset=".55" stop-color="#9d2b84"/><stop offset="1" stop-color="#be495b"/>
+      </linearGradient></defs>
+      <g id="orbit-mark">
+        <g stroke="url(#orbit-color)" stroke-width="4.2" fill="none">
+          <ellipse cx="36" cy="25" rx="33" ry="10" transform="rotate(-31 36 25)"/>
+          <ellipse cx="36" cy="25" rx="33" ry="10" transform="rotate(31 36 25)"/>
+        </g>
+        <circle cx="36" cy="25" r="5.3" fill="url(#orbit-color)"/>
+      </g>
+    </svg><span>ROAM-GS</span></a>
+</header>
+<main>
+<section id="home" class="cinema" aria-labelledby="project">
+  <div class="cinema-title">
+    <h1 id="project"><svg class="orbit title-orbit" viewBox="0 0 72 50" aria-hidden="true" focusable="false">
+      <defs>
+        <ellipse id="title-orbit-track" cx="36" cy="25" rx="33" ry="10" pathLength="100"/>
+        <radialGradient id="orbit-core" cx="32%" cy="28%" r="75%">
+          <stop stop-color="#fff1fa"/><stop offset=".48" stop-color="#d69cda"/><stop offset="1" stop-color="#925997"/>
+        </radialGradient>
+      </defs>
+      <g fill="none" stroke="url(#orbit-color)" stroke-width="6.8">
+        <g class="orbit-ring" transform="rotate(-31 36 25)">
+          <use href="#title-orbit-track"/>
+          <use href="#title-orbit-track" class="orbit-glint"/>
+        </g>
+        <g class="orbit-ring orbit-ring-back" transform="rotate(31 36 25)">
+          <use href="#title-orbit-track"/>
+          <use href="#title-orbit-track" class="orbit-glint orbit-glint-return"/>
+        </g>
+      </g>
+      <circle cx="36" cy="25" r="5.3" fill="url(#orbit-core)"/>
+    </svg><span>ROAM-GS</span></h1>
+    <h2 class="paper-title"><strong>Go Far, Look Less</strong><span>Active Multi-Room Reconstruction with Persistent Goals and Selective Views</span></h2>
+    <p class="authors" aria-label="Authors">
+      <span>Jiawei Jiang<sup>1</sup>,</span> <span>Haonan Zhou<sup>1</sup>,</span>
+      <span>Wendi Hu<sup>1</sup>,</span> <span>Jiabei Hu<sup>1</sup>,</span><br class="byline-break">
+      <span>Yina Xiang<sup>1</sup>,</span> <span>Kaiyue Zhou<sup>2</sup>,</span>
+      <span><a href="https://cvnext.github.io/">Gaoang Wang</a><sup>1</sup></span>
+    </p>
+    <p class="affiliations"><span><sup>1</sup> Zhejiang University</span> <span><sup>2</sup> Chengdu Minto Tech</span></p>
+    <div class="actions"><a class="paper-link" href="#comparison"><svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="19" height="15" rx="3"/><path d="m10 9 5 3-5 3z"/></svg> Watch comparisons</a></div>
+  </div>
+  <figure class="hero-scene">
+    <video id="cinema-film" class="room" poster="media/hero.jpg" src="media/hero.mp4" muted loop playsinline preload="metadata" aria-label="ROAM-GS incremental Gaussian reconstruction of HM3D 00848"></video>
+  </figure>
+  <div class="scroll-glass" aria-hidden="true"></div>
+  <div class="transport">
+    <a class="explore-link" href="#comparison" aria-label="Explore video comparisons"><span>Explore</span><svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 4v15m-6-6 6 6 6-6"/></svg></a>
+  </div>
+</section>
+<div class="home-blend" aria-hidden="true"></div>
+<nav class="contents" aria-label="Table of contents">
+    <p class="contents-title"><svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M8 5v14m0-11h11M8 16h8"/><circle cx="8" cy="8" r="1.6"/><circle cx="8" cy="16" r="1.6"/></svg> Contents</p>
+    <ul>
+      <li><a href="#home">Home</a></li>
+      <li><a href="#comparison">Videos</a></li>
+      <li><a href="#abstract">Abstract</a></li>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#results">Results</a></li>
+    </ul>
+</nav>
+<section id="comparison" class="demos" aria-labelledby="compare-title">
+ <div class="gallery-inner">
+  <header class="section-head"><h2 id="compare-title">Video Comparisons</h2></header>
+  <p class="replay-note">Cutaway replays use smoothed camera paths to show how each reconstruction develops.</p>
+  <h3 class="dataset">HSSD</h3>
+  <div class="films">
+   <div class="film-slot">
+    <figure data-scene="102344250" class="film" id="scene-102344250">
+     <video controls muted loop playsinline preload="none" poster="media/102344250-replay.jpg" src="media/102344250-replay.mp4" aria-label="102344250 reconstruction comparison"></video>
+     <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
+    </figure>
+   </div>
+   <div class="film-slot">
+    <figure data-scene="106365897_174225972" class="film" id="scene-106365897_174225972">
+     <video controls muted loop playsinline preload="none" poster="media/106365897_174225972-replay.jpg" src="media/106365897_174225972-replay.mp4" aria-label="106365897_174225972 reconstruction comparison"></video>
+     <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
+    </figure>
+   </div>
+  </div>
+  <h3 class="dataset">HM3D</h3>
+  <div class="films">
+   <div class="film-slot">
+    <figure data-scene="00848-ziup5kvtCCR" data-explorer="video-only" class="film" id="scene-00848-ziup5kvtCCR">
+     <video controls muted loop playsinline preload="none" poster="media/00848-ziup5kvtCCR-replay.jpg" src="media/00848-ziup5kvtCCR-replay.mp4" aria-label="00848-ziup5kvtCCR reconstruction comparison"></video>
+     <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
+    </figure>
+   </div>
+   <div class="film-slot">
+    <figure data-center-each data-scene="00813-svBbv1Pavdk" data-explorer="video-only" class="film" id="scene-00813-svBbv1Pavdk">
+     <video controls muted loop playsinline preload="none" poster="media/00813-svBbv1Pavdk-replay.jpg" src="media/00813-svBbv1Pavdk-replay.mp4" aria-label="00813-svBbv1Pavdk reconstruction comparison"></video>
+     <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
+    </figure>
+   </div>
+   <div class="film-slot">
+    <figure data-scene="00860-RJaJt8UjXav" data-explorer="video-only" class="film" id="scene-00860-RJaJt8UjXav">
+     <video controls muted loop playsinline preload="none" poster="media/00860-RJaJt8UjXav-replay.jpg" src="media/00860-RJaJt8UjXav-replay.mp4" aria-label="00860-RJaJt8UjXav reconstruction comparison"></video>
+     <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
+    </figure>
+   </div>
+   <div class="film-slot">
+    <figure data-center-each data-scene="00879-7Ukhou1GxYi" data-explorer="video-only" class="film" id="scene-00879-7Ukhou1GxYi">
+     <video controls muted loop playsinline preload="none" poster="media/00879-7Ukhou1GxYi-replay.jpg" src="media/00879-7Ukhou1GxYi-replay.mp4" aria-label="00879-7Ukhou1GxYi reconstruction comparison"></video>
+     <figcaption><span>ActiveGS</span><strong>ROAM-GS</strong></figcaption>
+    </figure>
+   </div>
+  </div>
+  
+ </div>
+</section>
+<section class="paper-overview" id="abstract" aria-labelledby="abstract-title">
+  <div class="abstract-layout">
+    <h2 id="abstract-title">Abstract</h2>
+    <div class="abstract-copy">
+      <p>Active 3D reconstruction aims to allocate a sparse view budget to recover complete geometry and high-fidelity renderings. However, existing methods degrade sharply in multi-room homes: myopic next-best-view scoring gives transit no credit for distant rooms and over-polishes irreducible nearby residuals, whereas dense mappers reach far rooms only by streaming thousands of frames.</p>
+      <p>We propose <strong class="method-name">ROAM-GS</strong>, which couples persistent goals with selective views: each decision selects a goal and a variable-horizon prefix toward it, capturing only at its endpoint. A Surface Reconstruction Memory scores poses by projecting post-update defects and viewing directions. Persistent goals credit transit with their remaining value and are released once arrivals stop measurably improving them.</p>
+      <p><strong class="result-claim">Without per-scene tuning, <span class="method-name">ROAM-GS</span> achieves state-of-the-art multi-room reconstruction while preserving single-room Replica fidelity</strong>, raising mean coverage from <strong class="metric">74%</strong> to <strong class="metric outcome">93%</strong> on HSSD and from <strong class="metric">47%</strong> to <strong class="metric outcome">96%</strong> (<strong class="metric outcome">+11.7&nbsp;dB</strong> PSNR) on HM3D, and surpassing <strong class="metric">90-minute</strong> TRACE dense mapping on a five-room HM3D home within <strong class="metric outcome">20 minutes</strong> using <strong class="metric outcome">165×</strong> fewer images.</p>
+    </div>
+  </div>
+</section>
+<section class="pipeline-section" id="overview" aria-labelledby="pipeline-title">
+  <header class="pipeline-heading" id="pipeline">
+    <h2 id="pipeline-title">Overview</h2>
+  </header>
+  <figure>
+    <a href="figures/pipeline.pdf?v=1637" aria-label="Open the full-size ROAM-GS pipeline diagram">
+      <img loading="lazy" decoding="async" width="2600" height="1308" src="figures/pipeline-overview.webp?v=1637" alt="A posed RGB-D capture updates the Gaussian map, occupancy grid, and surface memory. Persistent goals guide travel to a target region. Selective views score short, medium, and long paths. The agent executes the selected path prefix and captures the next RGB-D image at its endpoint.">
+    </a>
+    <figcaption class="method-overview"><strong><span class="method-name">ROAM-GS</span> is a <span class="concept training-free">training-free</span> framework for active multi-room reconstruction.</strong> At time t, the agent first records a posed RGB-D capture, which incrementally updates the 3D Gaussian map, the voxel occupancy grid, and the <strong class="concept memory">Surface Reconstruction Memory</strong> of post-update defects and viewing directions. A <strong class="concept goal">persistent goal</strong> is then held across decisions, crediting transit with the value still remaining at its target region, while <strong class="concept views">selective views</strong> score variable-horizon prefixes toward candidate goals by rendering-free projection through the memory under a single score S&nbsp;=&nbsp;B&nbsp;+&nbsp;V. The agent executes the highest-scoring prefix without sensing and captures only at its endpoint, releasing the goal once arrival captures stop measurably improving it, before repeating this process in the next planning loop. In this figure, the persistent goal runs through the search, travel, and observe stages at the top; below, the orange pose marks the endpoint that is actually captured, while the hollow query poses along the route are credited from memory without being captured.</figcaption>
+  </figure>
+</section>
+<section id="results" class="results" aria-labelledby="results-title">
+<h2 id="results-title">Results</h2>
+<div class="result-tabs" aria-label="Results views" hidden>
+  <button type="button" id="tab-benchmark" aria-controls="result-benchmark">Benchmark</button>
+  <button type="button" id="tab-progression" aria-controls="result-progression">Progression</button>
+  <button type="button" id="tab-geometry" aria-controls="result-geometry">Geometry</button>
+  <button type="button" id="tab-views" aria-controls="result-views">Novel views</button>
+</div>
+<div class="result-panel" id="result-benchmark">
+  <div class="benchmark-heading"><h3>Multi-room reconstruction</h3></div>
+
+<div class="table-scroll" tabindex="0" role="region" aria-label="Multi-room benchmark, scroll horizontally to see all room sizes">
+<table class="benchmark">
+<caption class="sr-only">Multi-room reconstruction at 500 views, by dataset and home size</caption>
+<colgroup span="2"></colgroup><colgroup span="3"></colgroup><colgroup span="3"></colgroup><colgroup span="3"></colgroup>
+<thead>
+<tr><td colspan="2"></td><th scope="colgroup" colspan="3">Small</th><th scope="colgroup" colspan="3">Medium</th><th scope="colgroup" colspan="3">Large</th></tr>
+<tr><th scope="col"><span class="sr-only">Dataset</span></th><th scope="col">Method</th><th scope="col">PSNR↑</th><th scope="col">Cov10↑</th><th scope="col">CM↓</th><th scope="col">PSNR↑</th><th scope="col">Cov10↑</th><th scope="col">CM↓</th><th scope="col">PSNR↑</th><th scope="col">Cov10↑</th><th scope="col">CM↓</th></tr>
+</thead>
+<tbody>
+<tr><th class="benchmark-dataset" scope="rowgroup" rowspan="7"><span>HSSD</span></th><th scope="row">FisherRF</th><td>13.01<small>± 0.34</small></td><td>21.5<small>± 0.1</small></td><td>98.3<small>± 0.2</small></td><td class="third">19.30<small>± 1.46</small></td><td>55.0<small>± 16.5</small></td><td class="third">39.1<small>± 16.0</small></td><td>14.49<small>± 0.03</small></td><td>6.7<small>± 0.1</small></td><td>407.6<small>± 0.1</small></td></tr>
+<tr><th scope="row">POp-GS</th><td>13.70<small>± 0.85</small></td><td>27.3<small>± 6.7</small></td><td>80.0<small>± 21.5</small></td><td>18.67<small>± 0.43</small></td><td>48.1<small>± 6.3</small></td><td>43.6<small>± 12.2</small></td><td class="third">14.60<small>± 0.13</small></td><td>7.2<small>± 1.1</small></td><td>404.5<small>± 1.2</small></td></tr>
+<tr><th scope="row">NARUTO</th><td class="third">15.97<small>± 1.42</small></td><td class="third">42.6<small>± 9.0</small></td><td class="third">49.9<small>± 1.4</small></td><td>15.12<small>± 0.12</small></td><td>34.5<small>± 1.8</small></td><td>92.1<small>± 11.0</small></td><td>13.82<small>± 0.50</small></td><td class="third">13.5<small>± 2.3</small></td><td class="second">117.9<small>± 72.2</small></td></tr>
+<tr><th scope="row">ActiveSplat</th><td>9.95<small>± 0.62</small></td><td>42.4<small>± 3.3</small></td><td>56.9<small>± 2.5</small></td><td>10.37<small>± 0.05</small></td><td class="third">68.9<small>± 1.4</small></td><td>41.9<small>± 0.5</small></td><td>3.39<small>± 0.06</small></td><td>10.0<small>± 0.8</small></td><td>350.4<small>± 2.7</small></td></tr>
+<tr><th scope="row">ActiveGS</th><td class="second">21.10<small>± 1.94</small></td><td class="second">78.9<small>± 7.2</small></td><td class="second">28.6<small>± 9.1</small></td><td class="second">27.18<small>± 0.18</small></td><td class="second">98.2<small>± 0.5</small></td><td class="second">7.4<small>± 0.1</small></td><td class="second">16.64<small>± 0.75</small></td><td class="second">16.4<small>± 4.5</small></td><td class="third">322.6<small>± 38.4</small></td></tr>
+<tr><th scope="row"><strong>ROAM-GS (ours)</strong></th><td class="best">25.31<small>± 0.14</small></td><td class="best">97.5<small>± 0.1</small></td><td class="best">3.8<small>± 0.1</small></td><td class="best">27.49<small>± 0.41</small></td><td class="best">98.7<small>± 0.2</small></td><td class="best">7.2<small>± &lt;0.1</small></td><td class="best">22.97<small>± 0.38</small></td><td class="best">74.1<small>± 0.1</small></td><td class="best">11.7<small>± 4.7</small></td></tr>
+<tr class="delta"><th scope="row">vs. best baseline</th><td>+4.2</td><td>+18.6</td><td>−24.8</td><td>+0.3</td><td>+0.5</td><td>−0.2</td><td>+6.3</td><td>+57.7</td><td>−106.2</td></tr>
+</tbody>
+<tbody>
+<tr><th class="benchmark-dataset" scope="rowgroup" rowspan="7"><span>HM3D</span></th><th scope="row">FisherRF</th><td>9.72<small>± 0.39</small></td><td>29.9<small>± 1.8</small></td><td>68.6<small>± 8.9</small></td><td>9.56<small>± 0.99</small></td><td>15.7<small>± 3.8</small></td><td>131.6<small>± 11.8</small></td><td>7.31<small>± 1.07</small></td><td>7.4<small>± 3.5</small></td><td>273.3<small>± 73.1</small></td></tr>
+<tr><th scope="row">POp-GS</th><td>9.73<small>± 0.54</small></td><td class="third">32.3<small>± 2.9</small></td><td>65.4<small>± 7.9</small></td><td>10.18<small>± 0.49</small></td><td>20.3<small>± 2.8</small></td><td>124.2<small>± 2.1</small></td><td class="third">8.37<small>± 0.47</small></td><td class="third">12.7<small>± 1.4</small></td><td class="third">224.1<small>± 18.4</small></td></tr>
+<tr><th scope="row">NARUTO</th><td>12.15<small>± 0.47</small></td><td>22.5<small>± 1.7</small></td><td class="third">50.6<small>± 5.4</small></td><td class="third">14.48<small>± 0.60</small></td><td>21.6<small>± 2.8</small></td><td>101.1<small>± 11.7</small></td><td class="second">9.42<small>± 0.51</small></td><td class="second">14.22<small>± 3.21</small></td><td class="second">199.12<small>± 45.19</small></td></tr>
+<tr><th scope="row">ActiveSplat</th><td class="third">12.76<small>± 0.01</small></td><td>19.5<small>± 0.1</small></td><td>162.2<small>± 0.3</small></td><td>11.06<small>± 0.27</small></td><td class="third">25.6<small>± 0.8</small></td><td class="third">99.1<small>± 6.4</small></td><td>6.69<small>± 0.08</small></td><td>11.6<small>± 0.7</small></td><td>234.4<small>± 2.0</small></td></tr>
+<tr><th scope="row">ActiveGS</th><td class="second">18.59<small>± 5.28</small></td><td class="second">81.0<small>± 23.9</small></td><td class="second">22.9<small>± 28.0</small></td><td class="second">15.84<small>± 0.51</small></td><td class="second">50.7<small>± 3.5</small></td><td class="second">63.7<small>± 9.5</small></td><td>6.42<small>± 0.02</small></td><td>6.5<small>± 0.5</small></td><td>327.9<small>± 2.3</small></td></tr>
+<tr><th scope="row"><strong>ROAM-GS (ours)</strong></th><td class="best">27.33<small>± 0.40</small></td><td class="best">97.2<small>± 0.3</small></td><td class="best">3.1<small>± &lt;0.1</small></td><td class="best">26.08<small>± 0.34</small></td><td class="best">97.4<small>± 1.5</small></td><td class="best">3.3<small>± 0.7</small></td><td class="best">23.82<small>± 0.29</small></td><td class="best">90.5<small>± 2.2</small></td><td class="best">7.1<small>± 0.4</small></td></tr>
+<tr class="delta"><th scope="row">vs. best baseline</th><td>+8.7</td><td>+16.2</td><td>−19.8</td><td>+10.2</td><td>+46.7</td><td>−60.4</td><td>+14.4</td><td>+76.3</td><td>−192.0</td></tr>
+</tbody>
+</table>
+</div>
+  <p class="sample-note">Homes per size group (S/M/L) · HSSD 2/2/1 · HM3D 1/2/1.</p>
+  <p class="benchmark-note">500 views · Mean ± SD across three seeds. PSNR (dB) · Cov10 (%) · CM (cm).</p>
+  <div class="benchmark-heading replica-heading"><h3 id="replica-title">Single-room reconstruction on Replica</h3></div>
+  <div class="table-scroll" tabindex="0" role="region" aria-labelledby="replica-title">
+    <table class="benchmark replica">
+      <caption class="sr-only">Single-room reconstruction at 200 mapping frames, averaged over Office0, Office1, and Room0</caption>
+      <thead><tr><th scope="col">Method</th><th scope="col">PSNR ↑</th><th scope="col">SSIM ↑</th><th scope="col">LPIPS ↓</th><th scope="col">Cov10 ↑</th><th scope="col">Cov5 ↑</th><th scope="col">CM ↓</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">FisherRF</th><td>30.87</td><td>0.9051</td><td>0.2293</td><td>87.01</td><td>82.27</td><td>3.771</td></tr>
+        <tr><th scope="row">POp-GS</th><td>27.51</td><td>0.8375</td><td>0.2634</td><td>67.22</td><td>63.69</td><td>10.183</td></tr>
+        <tr><th scope="row">NARUTO</th><td>29.22</td><td>0.8728</td><td>0.3126</td><td class="third">99.43</td><td class="third">97.71</td><td>2.241</td></tr>
+        <tr><th scope="row">ActiveSplat</th><td>21.89</td><td>0.8833</td><td>0.1889</td><td>84.16</td><td>80.89</td><td>5.858</td></tr>
+        <tr><th scope="row">TRACE</th><td class="third">34.33</td><td class="third">0.9482</td><td class="second">0.0730</td><td>98.20</td><td>96.09</td><td class="best">2.050</td></tr>
+        <tr><th scope="row">ActiveGS</th><td class="second">36.32</td><td class="second">0.9588</td><td class="best">0.0727</td><td class="second">99.60</td><td class="second">98.92</td><td class="third">2.108</td></tr>
+        <tr><th scope="row"><strong>ROAM-GS (ours)</strong></th><td class="best">36.75</td><td class="best">0.9604</td><td class="third">0.0763</td><td class="best">99.94</td><td class="best">99.24</td><td class="second">2.076</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="benchmark-note">200 mapping frames per method. Mean over Office0, Office1, and Room0. PSNR (dB) · Cov10 and Cov5 (%) · CM (cm).</p>
+  <div class="table-key"><span><i class="best"></i>Best</span><span><i class="second"></i>Second</span><span><i class="third"></i>Third</span></div>
+
+</div>
+<div class="result-panel" id="result-progression">
+<div class="benchmark-heading detail-heading"><h3>PSNR and surface coverage by observation count</h3></div>
+<figure class="paper-result detail-figure">
+  <div class="paper-curves">
+    <img loading="lazy" decoding="async" width="2600" height="1067" src="figures/coverage-progression.webp" alt="PSNR and Cov10 across captured views for small, medium, and large homes. The top row shows HSSD and the bottom row shows HM3D.">
+  </div>
+  <figcaption>Hover or tap a curve to inspect the nearest checkpoint. Curves show the mean over three seeds. Shaded bands show one standard deviation.</figcaption>
+</figure>
+</div>
+<div class="result-panel" id="result-geometry">
+<div class="benchmark-heading detail-heading">
+  <h3>Reconstructed geometry</h3><span class="detail-hint" aria-hidden="true"><span>Hover to zoom</span><span>Tap to zoom</span></span>
+</div>
+<figure class="paper-result detail-figure">
+  <div class="detail-surface" data-detail="figures/mesh-comparison-detail.webp" tabindex="0" role="group" aria-label="Reconstructed geometry. Arrow keys explore details. Escape closes the magnifier.">
+    <img loading="lazy" decoding="async" width="2400" height="1650" src="figures/mesh-comparison.webp" alt="Six methods compared across five HSSD and HM3D homes, with one home per row and one reconstruction method per column.">
+    <span class="detail-target" aria-hidden="true" hidden></span>
+  </div>
+  <figcaption><a href="figures/geometry.pdf">Open original figure (PDF)</a></figcaption>
+</figure>
+</div>
+<div class="result-panel" id="result-views">
+<div class="benchmark-heading detail-heading">
+  <h3>Novel view synthesis</h3><span class="detail-hint" aria-hidden="true"><span>Hover to zoom</span><span>Tap to zoom</span></span>
+</div>
+<figure class="paper-result detail-figure">
+  <div class="detail-surface" data-detail="figures/novel-views-detail.webp" tabindex="0" role="group" aria-label="Novel view synthesis. Arrow keys explore details. Escape closes the magnifier.">
+    <img loading="lazy" decoding="async" width="2400" height="1082" src="figures/novel-views.webp" alt="Reference images and novel views rendered by six methods, with PSNR labels and red boxes around the comparison regions.">
+    <span class="detail-target" aria-hidden="true" hidden></span>
+  </div>
+  <figcaption>Held-out renderings after 500 observations. Red boxes mark local details.</figcaption>
+</figure>
+</div>
+</section>
+
+</main>
+<footer class="dataset-credits">Scene visualizations are derived from the <a href="https://huggingface.co/datasets/hssd/hssd-hab">Habitat Synthetic Scenes Dataset</a> (<a href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a>) and the <a href="https://github.com/matterport/habitat-matterport-3dresearch">Habitat-Matterport 3D Research Dataset</a> (<a href="https://matterport.com/legal/matterport-end-user-license-agreement-academic-use-model-data">Matterport academic use terms</a>).</footer>
+<script src="js/gallery-glass.js?v=overview"></script>
+<script src="js/results.js?v=appendix-normals"></script>
+<script type="module" src="js/paper-checkpoints.js"></script>
+<script type="module" src="js/figure-detail.js"></script>
+<script src="js/contents.js?v=floating-orbit"></script>
+<script>
+const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
+const clips=[...document.querySelectorAll('video')];
+const visibleClips=new Set();
+const userPaused=new WeakSet();
+function updatePlayback(clip){
+  if(document.hidden || !visibleClips.has(clip) || clip.closest("[data-exploring]")){
+    clip.pause();
+  }else if(!reducedMotion.matches && !userPaused.has(clip)){
+    clip.play().catch(()=>{});
+  }
+}
+const observer=new IntersectionObserver(entries=>{
+  for(const entry of entries){
+    const clip=entry.target;
+    if(entry.isIntersecting && entry.intersectionRatio>=.20)visibleClips.add(clip);
+    else visibleClips.delete(clip);
+    updatePlayback(clip);
+  }
+},{threshold:[0,.20]});
+for(const clip of clips){
+  clip.addEventListener('pause',()=>{
+    if(clip.paused && !clip.closest("[data-exploring]") && visibleClips.has(clip) && !document.hidden)userPaused.add(clip);
+  });
+  clip.addEventListener('play',()=>userPaused.delete(clip));
+  observer.observe(clip);
+}
+document.addEventListener('visibilitychange',()=>clips.forEach(updatePlayback));
+reducedMotion.addEventListener('change',()=>{
+  if(reducedMotion.matches)clips.forEach(clip=>clip.pause());
+  else clips.forEach(updatePlayback);
+});
+</script>
+<script>
+const room = document.getElementById('cinema-film');
+room.defaultPlaybackRate = 1.25;
+room.playbackRate = room.defaultPlaybackRate;
+const matchingReplay = document.querySelector('#scene-00848-ziup5kvtCCR video');
+matchingReplay.defaultPlaybackRate = matchingReplay.playbackRate = room.defaultPlaybackRate;
+</script>
+<script type="module" src="js/scene-explorer.js?v=snapshot-budget"></script>
+</body>
+</html>

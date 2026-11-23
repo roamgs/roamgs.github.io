@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -11 72 72">
+      <style>@media (prefers-color-scheme: dark) {stop:first-child {stop-color:#dfc2ff} stop:nth-child(2) {stop-color:#f3afe1} stop:last-child {stop-color:#ffc1d6}}</style>
+      <defs><linearGradient id="orbit-color" gradientUnits="userSpaceOnUse" x1="6" y1="18" x2="66" y2="33">
+        <stop stop-color="#512675"/><stop offset=".55" stop-color="#9d2b84"/><stop offset="1" stop-color="#be495b"/>
+      </linearGradient></defs>
+      <g id="orbit-mark">
+        <g stroke="url(#orbit-color)" stroke-width="4.4" fill="none">
+          <ellipse cx="36" cy="25" rx="33" ry="10" transform="rotate(-31 36 25)"/>
+          <ellipse cx="36" cy="25" rx="33" ry="10" transform="rotate(31 36 25)"/>
+        </g>
+        <circle cx="36" cy="25" r="5.3" fill="url(#orbit-color)"/>
+      </g>
+    </svg>
