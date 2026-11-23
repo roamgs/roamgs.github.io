@@ -334,7 +334,7 @@ summary:hover {color: var(--ink)}
    <div class="film-slot">
     <figure data-scene="102344250" class="film" id="scene-102344250">
      <div class="viewport">
-      <video controls muted loop playsinline preload="none" poster="media/102344250-replay.jpg?v=fast" src="media/102344250-replay.mp4?v=scroll30" aria-label="102344250 reconstruction comparison"></video>
+      <video controls muted loop playsinline preload="none" poster="media/102344250-replay.jpg?v=fast" src="media/102344250-replay.mp4?v=clarity1" aria-label="102344250 reconstruction comparison"></video>
       <button class="film-surface" type="button" aria-label="Play 102344250 comparison" hidden></button>
       <button class="scene-mode" type="button" aria-pressed="false">Explore 3D</button>
       <span class="scene-status" role="status"></span>
@@ -345,7 +345,7 @@ summary:hover {color: var(--ink)}
    <div class="film-slot">
     <figure data-scene="106365897_174225972" class="film" id="scene-106365897_174225972">
      <div class="viewport">
-      <video controls muted loop playsinline preload="none" poster="media/106365897_174225972-replay.jpg?v=fast" src="media/106365897_174225972-replay.mp4?v=scroll30" aria-label="106365897_174225972 reconstruction comparison"></video>
+      <video controls muted loop playsinline preload="none" poster="media/106365897_174225972-replay.jpg?v=fast" src="media/106365897_174225972-replay.mp4?v=clarity1" aria-label="106365897_174225972 reconstruction comparison"></video>
       <button class="film-surface" type="button" aria-label="Play 106365897_174225972 comparison" hidden></button>
       <button class="scene-mode" type="button" aria-pressed="false">Explore 3D</button>
       <span class="scene-status" role="status"></span>
@@ -359,7 +359,7 @@ summary:hover {color: var(--ink)}
    <div class="film-slot">
     <figure data-scene="00848-ziup5kvtCCR" class="film" id="scene-00848-ziup5kvtCCR">
      <div class="viewport">
-      <video controls muted loop playsinline preload="none" poster="media/00848-ziup5kvtCCR-replay.jpg?v=white30" src="media/00848-ziup5kvtCCR-replay.mp4?v=white30" aria-label="00848-ziup5kvtCCR reconstruction comparison"></video>
+      <video controls muted loop playsinline preload="none" poster="media/00848-ziup5kvtCCR-replay.jpg?v=white30" src="media/00848-ziup5kvtCCR-replay.mp4?v=clarity1" aria-label="00848-ziup5kvtCCR reconstruction comparison"></video>
       <button class="film-surface" type="button" aria-label="Play 00848-ziup5kvtCCR comparison" hidden></button>
       <button class="scene-mode" type="button" aria-pressed="false">Explore 3D</button>
       <span class="scene-status" role="status"></span>
@@ -370,7 +370,7 @@ summary:hover {color: var(--ink)}
    <div class="film-slot">
     <figure data-center-each data-scene="00813-svBbv1Pavdk" class="film" id="scene-00813-svBbv1Pavdk">
      <div class="viewport">
-      <video controls muted loop playsinline preload="none" poster="media/00813-svBbv1Pavdk-replay.jpg?v=fast" src="media/00813-svBbv1Pavdk-replay.mp4?v=white30" aria-label="00813-svBbv1Pavdk reconstruction comparison"></video>
+      <video controls muted loop playsinline preload="none" poster="media/00813-svBbv1Pavdk-replay.jpg?v=fast" src="media/00813-svBbv1Pavdk-replay.mp4?v=clarity1" aria-label="00813-svBbv1Pavdk reconstruction comparison"></video>
       <button class="film-surface" type="button" aria-label="Play 00813-svBbv1Pavdk comparison" hidden></button>
       <button class="scene-mode" type="button" aria-pressed="false">Explore 3D</button>
       <span class="scene-status" role="status"></span>
@@ -381,7 +381,7 @@ summary:hover {color: var(--ink)}
    <div class="film-slot">
     <figure data-scene="00860-RJaJt8UjXav" class="film" id="scene-00860-RJaJt8UjXav">
      <div class="viewport">
-      <video controls muted loop playsinline preload="none" poster="media/00860-RJaJt8UjXav-replay.jpg?v=fast" src="media/00860-RJaJt8UjXav-replay.mp4?v=scroll30" aria-label="00860-RJaJt8UjXav reconstruction comparison"></video>
+      <video controls muted loop playsinline preload="none" poster="media/00860-RJaJt8UjXav-replay.jpg?v=fast" src="media/00860-RJaJt8UjXav-replay.mp4?v=clarity1" aria-label="00860-RJaJt8UjXav reconstruction comparison"></video>
       <button class="film-surface" type="button" aria-label="Play 00860-RJaJt8UjXav comparison" hidden></button>
       <button class="scene-mode" type="button" aria-pressed="false">Explore 3D</button>
       <span class="scene-status" role="status"></span>
@@ -392,7 +392,7 @@ summary:hover {color: var(--ink)}
    <div class="film-slot">
     <figure data-center-each data-scene="00879-7Ukhou1GxYi" class="film" id="scene-00879-7Ukhou1GxYi">
      <div class="viewport">
-      <video controls muted loop playsinline preload="none" poster="media/00879-7Ukhou1GxYi-replay.jpg?v=fast" src="media/00879-7Ukhou1GxYi-replay.mp4?v=white30" aria-label="00879-7Ukhou1GxYi reconstruction comparison"></video>
+      <video controls muted loop playsinline preload="none" poster="media/00879-7Ukhou1GxYi-replay.jpg?v=fast" src="media/00879-7Ukhou1GxYi-replay.mp4?v=clarity1" aria-label="00879-7Ukhou1GxYi reconstruction comparison"></video>
       <button class="film-surface" type="button" aria-label="Play 00879-7Ukhou1GxYi comparison" hidden></button>
       <button class="scene-mode" type="button" aria-pressed="false">Explore 3D</button>
       <span class="scene-status" role="status"></span>
@@ -433,10 +433,11 @@ function selectVideoSource(clip) {
   const constrained = connection?.saveData || (connection?.downlink > 0 && connection.downlink <= 3) ||
     ['slow-2g', '2g', '3g'].includes(connection?.effectiveType);
   const smallCard = !hero && (width <= 360 || matchMedia('(max-width: 680px)').matches);
-  if (width * devicePixelRatio > (hero ? 798 : 704) && !smallCard && !constrained) return;
+  if (!constrained && !smallCard && width * devicePixelRatio > (hero ? 798 : 800)) return;
+  const directory = hero || constrained ? 'compact' : '800w';
   const url = new URL(clip.src);
   clock.fullSource = url.href;
-  url.pathname = url.pathname.replace(/[^/]+$/, 'compact/$&');
+  url.pathname = url.pathname.replace(/[^/]+$/, directory + '/$&');
   clip.src = url.href;
 }
 
