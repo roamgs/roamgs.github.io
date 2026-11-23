@@ -79,3 +79,10 @@ body {
   text-align-last: start;
   hyphens: auto;
 }
+.theme-switch {
+  position:absolute;z-index:2;top:max(.5rem,env(safe-area-inset-top));left:max(var(--gutter),env(safe-area-inset-left));
+  display:grid;place-items:center;width:2.75rem;height:2.75rem;padding:0;
+  border:0;border-radius:50%;background:transparent;color:var(--ink);cursor:pointer;
+}
+.theme-switch svg {width:1.4rem;height:1.4rem}
+.theme-switch:hover {background:color-mix(in srgb,currentColor 9%,transparent)}

@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="js/theme.js?v=appearance"></script>
+<script src="js/theme.js?v=default-dark"></script>
 <title>ROAM-GS · Go Far, Look Less</title>
 <link rel="icon" type="image/png" sizes="32x32" href="figures/roam-orbit.png">
 <link rel="icon" type="image/svg+xml" sizes="any" href="figures/roam-orbit.svg">
@@ -204,7 +204,7 @@ summary:hover {color: var(--ink)}
 </style>
 <link rel="stylesheet" href="css/gallery-glass.css?v=wordmark-colors">
 <link rel="stylesheet" href="css/results.css?v=replica">
-<link rel="stylesheet" href="css/theme.css?v=homepage-appearance">
+<link rel="stylesheet" href="css/theme.css?v=theme-switch">
 </head>
 <body>
 
@@ -229,6 +229,9 @@ summary:hover {color: var(--ink)}
 </header>
 <main>
 <section id="home" class="cinema" aria-labelledby="project">
+  <button class="theme-switch" type="button" aria-label="Dark appearance" aria-pressed="true">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>
+  </button>
   <div class="cinema-title">
     <h1 id="project"><svg class="orbit title-orbit" viewBox="0 0 72 50" aria-hidden="true" focusable="false">
       <defs>
