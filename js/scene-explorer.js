@@ -3,28 +3,11 @@ import {createRenderer} from './splat-renderer.js?v=dense-ply-2';
 const clamp = (n,min,max) => Math.max(min,Math.min(max,n));
 let closeActive;
 const cachedScenes=new Map();
-const warmCandidates=new Map();
-let idleWarm;
-function queueWarm() {
-  clearTimeout(idleWarm);
-  const connection=navigator.connection;
-  if(document.hidden || closeActive || connection?.saveData || /2g/.test(connection?.effectiveType || '')) return;
-  idleWarm=setTimeout(()=>{
-    const target=[...warmCandidates.keys()].filter(card=>visibleClips.has(card.querySelector('video')))
-      .sort((a,b)=>distance(a)-distance(b))[0];
-    if(target && !closeActive && !document.hidden) warmCandidates.get(target)();
-  },900);
-}
-function distance(card) {
-  const rect=card.getBoundingClientRect();
-  return Math.abs(rect.top+rect.height/2-innerHeight/2);
-}
 const nearScene=new IntersectionObserver(entries=>{
   for(const {target,isIntersecting} of entries) {
     if(!isIntersecting && target.dataset.exploring) closeActive?.();
   }
-  queueWarm();
-},{threshold:[0,.25,.75,1]});
+});
 
 for (const figure of document.querySelectorAll('.film')) {
   const viewport=figure.querySelector('.viewport');
@@ -40,7 +23,7 @@ for (const figure of document.querySelectorAll('.film')) {
   status.setAttribute('role','status');
   viewport.append(mode,status);
 
-  let canvas,renderer,pointer,suppressClick,wasPlaying,expiry,intentTimer;
+  let canvas,renderer,pointer,suppressClick,wasPlaying,expiry;
   let ready=false, yaw=.93, pitch=.64, zoom=1;
   const resize=new ResizeObserver(()=>redraw());
   function redraw(moving=false) {
@@ -95,8 +78,8 @@ for (const figure of document.querySelectorAll('.film')) {
     canvas.style.visibility='visible';
     status.textContent=figure.dataset.exploring==='drag' ? 'Release drag to play' : 'Drag to orbit';
   }
-  function prepare(background=false) {
-    if(renderer || (background && (closeActive || navigator.connection?.saveData || document.hidden))) return;
+  function prepare() {
+    if(renderer) return;
     // Reserve GPU memory for the active comparison. Reuse a second completed pair on desktop.
     const cap=matchMedia('(pointer:coarse)').matches?1:2;
     for(const [card,cache] of cachedScenes) {
@@ -139,22 +122,12 @@ for (const figure of document.querySelectorAll('.film')) {
     }
   }
   nearScene.observe(figure);
-  warmCandidates.set(figure,()=>prepare(true));
-  viewport.addEventListener('pointerenter',event=>{
-    if(event.pointerType==='mouse') {
-      clearTimeout(idleWarm);
-      intentTimer=setTimeout(()=>prepare(true),160);
-    }
-  });
-  viewport.addEventListener('pointerleave',()=>clearTimeout(intentTimer));
-  mode.addEventListener('focus',()=>prepare(true));
   mode.addEventListener('click',()=>{
     if (figure.dataset.exploring) leave();
     else { explore('button'); surface.focus({preventScroll:true}); }
   });
   surface.addEventListener('pointerdown',e=>{
     if (!e.isPrimary || e.button!==0) return;
-    clearTimeout(idleWarm);
     suppressClick=false;
     pointer={id:e.pointerId,x:e.clientX,y:e.clientY,drag:false};
     surface.setPointerCapture(e.pointerId);
@@ -162,7 +135,14 @@ for (const figure of document.querySelectorAll('.film')) {
   surface.addEventListener('pointermove',e=>{
     if (pointer?.id!==e.pointerId) return;
     const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;
-    if (!pointer.drag && Math.hypot(dx,dy)<5) return;
+    if (!pointer.drag) {
+      if (Math.hypot(dx,dy)<6) return;
+      // Let a vertical swipe scroll the page without starting a model download.
+      if(e.pointerType==='touch' && !figure.dataset.exploring && Math.abs(dy)>=Math.abs(dx)) {
+        pointer=null;
+        return;
+      }
+    }
     pointer.drag=true;
     suppressClick=true;
     if (!figure.dataset.exploring) explore('drag');
@@ -201,16 +181,4 @@ for (const figure of document.querySelectorAll('.film')) {
     else return;
     e.preventDefault();
   });
-}
-
-// Begin the first pair while the visitor is still at a gallery navigation link.
-for(const link of document.querySelectorAll('a[href="#comparison"], a[href^="#scene-"]')) {
-  const warmDestination=()=>{
-    const destination=document.getElementById(link.hash.slice(1));
-    const card=destination?.matches('.film')?destination:destination?.querySelector('.film');
-    warmCandidates.get(card)?.();
-  };
-  link.addEventListener('pointerenter',event=>{if(event.pointerType==='mouse') warmDestination();});
-  link.addEventListener('focus',warmDestination);
-  link.addEventListener('pointerdown',warmDestination);
 }

@@ -66,7 +66,7 @@
 }
 #dense-mapping .film {max-width:56rem}
 .viewport {position:relative;aspect-ratio:1920/838;overflow:hidden;background:white}
-.viewport video {position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:brightness(1.035)}
+.viewport video {position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
 .film-surface {position:absolute;inset:0;width:100%;background:transparent;border:0;padding:0;cursor:pointer}
 .film-surface:focus-visible {outline-offset:-3px}
 .films .film figcaption,#dense-mapping .film figcaption {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;margin:0;padding:.48rem 0 .65rem;background:linear-gradient(180deg,#fff,#faf8fc);border:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
@@ -164,10 +164,10 @@
 .paper-result img {width:100%;height:auto}
 
 @media (hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference) {
-  .pipeline-section figure img,.paper-result img,.film-slot > .film {
+  .pipeline-section figure img,.paper-result img {
     transition:transform .42s cubic-bezier(.2,.75,.25,1),box-shadow .42s ease;
   }
-  .figure-lift img,.film-slot.figure-lift > .film {
+  .figure-lift img {
     transform:perspective(1200px) translate3d(var(--pull-x),calc(var(--pull-y) - 3px),0)
       rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
     box-shadow:0 12px 30px -14px #39214840;
@@ -207,7 +207,6 @@
 .film-surface {touch-action:pan-y;cursor:grab}
 .film[data-exploring] .film-surface {touch-action:none;cursor:grab}
 .film-surface:active {cursor:grabbing}
-.film-slot.figure-lift > .film[data-exploring] {transform:none}
 
 .contents {
   position:fixed;z-index:10;left:.8rem;top:50%;transform:translateY(-50%);

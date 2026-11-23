@@ -33,12 +33,11 @@ function addReplayControl(figure) {
 document.querySelectorAll('figure.film').forEach(addReplayControl);
 
 const allowTilt = matchMedia('(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference)');
-for (const surface of document.querySelectorAll('.film-slot, #overview figure a, .paper-result a')) {
+for (const surface of document.querySelectorAll('#overview figure a, .paper-result a')) {
   function reset() {
     surface.classList.remove('figure-lift');
   }
   surface.addEventListener('pointermove', event => {
-    if (surface.querySelector('[data-exploring]')) { reset(); return; }
     if (!allowTilt.matches || event.pointerType === 'touch') return;
     const rect = surface.getBoundingClientRect();
     const x = 2 * (event.clientX - rect.left) / rect.width - 1;

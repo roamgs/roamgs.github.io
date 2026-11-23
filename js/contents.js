@@ -5,30 +5,41 @@
   const sections = links.map(link => document.getElementById(link.hash.slice(1)));
   const glass = document.querySelector('.scroll-glass');
   const hero = document.getElementById('home');
+  let pending = false, currentIndex = -1, lastFrost;
+
   function markCurrent() {
-    mast.classList.toggle('is-compact', scrollY > 12);
-    if (glass) {
-      const bounds = hero.getBoundingClientRect();
-      const progress = Math.min(1, Math.max(0, -bounds.top / bounds.height));
-      const frost = Math.sin(Math.PI * progress) ** 2;
-      glass.style.setProperty('--scroll-frost', frost.toFixed(3));
-    }
-    const visible = scrollY > Math.min(innerHeight * .2, 140);
-    nav.classList.toggle('is-visible', visible);
-    nav.inert = !visible;
-    const line = Math.min(innerHeight * .25, 180);
+    pending = false;
+    const y = scrollY, height = innerHeight;
+    const line = Math.min(height * .25, 180);
+    const atEnd = y + height >= document.documentElement.scrollHeight - 2;
     const index = sections.findLastIndex(section => section.getBoundingClientRect().top <= line);
-    const atEnd = scrollY + innerHeight >= document.documentElement.scrollHeight - 2;
     const active = atEnd ? links.length - 1 : Math.max(0, index);
-    nav.style.setProperty('--progress', active / (links.length - 1));
-    links.forEach((link, i) => {
-      if (i === active) link.setAttribute('aria-current', 'location');
-      else link.removeAttribute('aria-current');
-    });
+    const progress = Math.min(1, Math.max(0, y / hero.offsetHeight));
+    const frost = (Math.sin(Math.PI * progress) ** 2).toFixed(2);
+    const visible = y > Math.min(height * .2, 140);
+
+    mast.classList.toggle('is-compact', y > 12);
+    nav.classList.toggle('is-visible', visible);
+    if (nav.inert === visible) nav.inert = !visible;
+    if (glass && frost !== lastFrost) {
+      glass.style.setProperty('--scroll-frost', frost);
+      lastFrost = frost;
+    }
+    if (active !== currentIndex) {
+      links[currentIndex]?.removeAttribute('aria-current');
+      links[active].setAttribute('aria-current', 'location');
+      nav.style.setProperty('--progress', active / (links.length - 1));
+      currentIndex = active;
+    }
   }
-  window.addEventListener('scroll', markCurrent, {passive:true});
-  window.addEventListener('resize', markCurrent);
-  window.addEventListener('hashchange', markCurrent);
-  window.addEventListener('pageshow', markCurrent);
+  function schedule() {
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(markCurrent);
+  }
+  window.addEventListener('scroll', schedule, {passive:true});
+  window.addEventListener('resize', schedule);
+  window.addEventListener('hashchange', schedule);
+  window.addEventListener('pageshow', schedule);
   markCurrent();
 })();
