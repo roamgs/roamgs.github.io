@@ -216,6 +216,9 @@ summary:hover {color: var(--ink)}
 .actions {display:flex;justify-content:center;gap:.55rem;flex-wrap:wrap;margin-top:clamp(1.4rem,3svh,2.3rem)}
 .actions a {display:inline-flex; gap:.65rem; align-items:center;justify-content:center;border-radius:999px; padding:.86rem 1.28rem; border:1px solid #fff9; background:#fffc; backdrop-filter:blur(15px);color:#282129;font-size:.93rem;font-weight:620;box-shadow:0 3px 12px #29223112}
 .actions .paper-link {color:white;background:#26232d;border-color:#26232d}
+.actions .code-status {display:inline-flex;align-items:center;gap:.45rem;padding:.5rem .85rem;border-radius:999px;background:#f3eff6;color:#594e63;font-size:.9rem;font-weight:560;white-space:nowrap}
+.code-status .ui-icon {fill:currentColor;stroke:none}
+[data-theme="dark"] .actions .code-status {background:#342c3b;color:#e1d6e7}
 .actions a:hover {box-shadow:0 3px 18px #29223136}
 .triangle {width:0;height:0;border-left:8px solid currentColor;border-top:5px solid transparent;border-bottom:5px solid transparent}
 .transport {min-height:3.1rem; justify-content:center}
@@ -303,7 +306,20 @@ summary:hover {color: var(--ink)}
       <span><a href="https://cvnext.github.io/">Gaoang Wang</a><sup>1,*</sup></span>
     </p>
     <p class="affiliations"><span><sup>1</sup> Zhejiang University</span> <span><sup>2</sup> Chengdu Minto Tech</span><br>* Corresponding authors</p>
-    <div class="actions"><a class="paper-link" href="#comparison"><svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="19" height="15" rx="3"/><path d="m10 9 5 3-5 3z"/></svg> Watch comparisons</a></div>
+    <div class="actions">
+      <a class="paper-link" href="#comparison">
+        <svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="19" height="15" rx="3"/><path d="m10 9 5 3-5 3z"/></svg>
+        Watch comparisons
+      </a>
+      <a href="https://arxiv.org/abs/2611.30802" aria-label="Paper on arXiv">
+        <svg class="ui-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M13 2H6a1 1 0 0 0-1 1v18a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M13 2v6h6M8 12h8m-8 4h6"/></svg>
+        Paper
+      </a>
+      <span class="code-status">
+        <svg class="ui-icon" aria-hidden="true" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        <span><span class="sr-only">GitHub </span>Code coming soon</span>
+      </span>
+    </div>
   </div>
   <figure class="hero-scene">
     <video id="cinema-film" class="room" src="media/hero.mp4?v=native30" poster="media/hero-cutout.webp?v=fast" muted loop playsinline preload="none" aria-label="ROAM-GS incremental Gaussian reconstruction of HM3D 00848"></video>
